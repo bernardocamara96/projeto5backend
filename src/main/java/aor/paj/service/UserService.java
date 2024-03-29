@@ -108,9 +108,9 @@ public class UserService {
     @GET
     @Path("/info")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response userInfo(@HeaderParam("token") String token) {
-        if (userBean.tokenValidator(token)) {
-            UserEntity userEntity = userBean.getUserByToken(token);
+    public Response userInfo(@HeaderParam("username") String username) {
+        if (userBean.checkIfUserExists(username)) {
+            UserEntity userEntity = userBean.getUserByUsername(username);
             UserWithNoPassword userWithoutPassword = userBean.convertUserEntityToUserWithNoPassword(userEntity);
             return Response.status(200).entity(userWithoutPassword).build();
         } else return Response.status(403).entity("Access denied").build();
