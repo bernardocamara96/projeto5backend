@@ -18,17 +18,34 @@ public class UserInfoCard {
     private String photoURL;
     private boolean deleted;
     private String role;
+    private boolean confirmed;
 
     public UserInfoCard() {
     }
 
-    public UserInfoCard(String username, String firstName, String photoURL, boolean deleted, String role) {
+    public UserInfoCard(String username, String firstName, String photoURL, boolean deleted, String role, boolean confirmed) {
         // todos os atributos são preenchidos pelo construtor a void
         this.username = username;
         this.firstName = firstName;
         this.photoURL = photoURL;
         this.deleted=deleted;
         this.role=role;
+        this.confirmed=confirmed;
+    }
+
+    @XmlElement
+    public String getId() {
+        return id;
+    }
+    public void setId(String id) {
+        this.id = id;
+    }
+    @XmlElement
+    public boolean isConfirmed() {
+        return confirmed;
+    }
+    public void setConfirmed(boolean confirmed) {
+        this.confirmed = confirmed;
     }
     @XmlElement
     public String getUsername() {

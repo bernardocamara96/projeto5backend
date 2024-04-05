@@ -322,6 +322,32 @@ public class TaskService {
         }else return Response.status(403).entity("User permissions violated").build();
     }
 
+    @GET
+    @Path("/number/{username}/{status}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response tasksNumberByUsernameAndStatus(@PathParam("username") String username, @PathParam("status") String status, @HeaderParam("token")String token){
+
+        if(userBean.tokenValidator(token)){
+            if(status.equals("100") || status.equals("200") || status.equals("300") || status.equals("todo")||status.equals("doing" )|| status.equals("done")) {
+                status = (status.equals("todo")) ? "100" : (status.equals("doing")) ? "200" : (status.equals("done")) ? "300" : status;
+                    ArrayList<TaskDto> tasks = taskBean.getTasksByUsernameAndStatus(username, status,false);
+                    if (tasks != null) {
+                        return Response.status(200).entity(tasks.size()).build();
+                    } else return Response.status(404).entity("There is no user with that username").build();
+            }
+            else if(status.equals("total")){
+                ArrayList<TaskDto> tasks=taskBean.getTasksByUsernameAndDeleted(username, false);
+                return Response.status(200).entity(tasks.size()).build();
+            }
+            else if(status.equals("deleted")){
+                ArrayList<TaskDto> tasks=taskBean.getTasksByUsernameAndDeleted(username, true);
+                return Response.status(200).entity(tasks.size()).build();
+            }
+
+            else return Response.status(400).entity("Invalid task status").build();
+        }else return Response.status(403).entity("User permissions violated").build();
+
+    }
 
 
 //        TaskDto existingTask = taskBean.getTask(id);

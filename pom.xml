@@ -64,6 +64,18 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <version>5.10.0</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>jakarta.mail</groupId>
+            <artifactId>jakarta.mail-api</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>jakarta.mail</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
     </dependencies>
     <build>
         <finalName>${project.artifactId}</finalName>
@@ -125,5 +137,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
                 </configuration>
             </plugin>
         </plugins>
+
     </build>
 </project>

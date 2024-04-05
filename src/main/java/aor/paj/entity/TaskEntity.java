@@ -15,6 +15,8 @@ import java.time.LocalDate;
 @NamedQuery(name="Task.deleteTasksBId", query="DELETE FROM TaskEntity t WHERE t.id = :id")
 @NamedQuery(name="Task.findTasksByDeleted", query="SELECT t FROM TaskEntity t WHERE t.deleted=:deleted ORDER BY t.priority DESC,CASE WHEN t.startDate IS NULL THEN 1 ELSE 0 END, t.startDate ASC,CASE WHEN t.endDate IS NULL THEN 1 ELSE 0 END, t.endDate ASC")
 @NamedQuery(name="Task.findTasksByCategoryAndUser", query="SELECT t FROM TaskEntity t WHERE t.category = :category AND t.user = :user ORDER BY t.priority DESC,CASE WHEN t.startDate IS NULL THEN 1 ELSE 0 END, t.startDate ASC,CASE WHEN t.endDate IS NULL THEN 1 ELSE 0 END, t.endDate ASC")
+@NamedQuery(name="Task.findTasksByStatusAndUser", query="SELECT t FROM TaskEntity t WHERE t.status=:status AND t.user=:user AND t.deleted=:deleted")
+@NamedQuery(name="Task.findTasksByUserAndDeleted", query="SELECT t FROM TaskEntity t WHERE t.user=:user AND t.deleted=:deleted")
 public class TaskEntity implements Serializable {
 
     private static final long longSerialVersionID=1L;

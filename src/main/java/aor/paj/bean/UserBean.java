@@ -3,18 +3,20 @@ package aor.paj.bean;
 import aor.paj.dao.CategoryDao;
 import aor.paj.dao.TaskDao;
 import aor.paj.dao.UserDao;
-import aor.paj.dto.LoginDto;
-import aor.paj.dto.User;
-import aor.paj.dto.UserInfoCard;
-import aor.paj.dto.UserWithNoPassword;
+import aor.paj.dto.*;
+import aor.paj.emailsender.EmailSender;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.status.userRoleManager;
+import com.mysql.cj.log.Log;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
+import jakarta.mail.MessagingException;
 import jakarta.persistence.NoResultException;
+import jakarta.validation.constraints.Email;
+import org.hibernate.annotations.DialectOverride;
 import util.HashUtil;
 
 
@@ -43,11 +45,15 @@ public class UserBean implements Serializable {
     TaskDao taskDao;
     @EJB
     CategoryDao categoryDao;
+    @EJB
+    EmailSender emailSender;
+
 
     private UserEntity convertUserDtotoUserEntity(User user){
         UserEntity userEntity = new UserEntity();
         if(userEntity != null){
             userEntity.setUsername(user.getUsername());
+            if(user.getPassword()!=null && !user.getPassword().isEmpty())
             userEntity.setPassword(user.getPassword());
             userEntity.setEmail(user.getEmail());
             userEntity.setFirstName(user.getFirstName());
@@ -65,21 +71,70 @@ public class UserBean implements Serializable {
     }
 
 
-    public boolean register(User user){
-        if(user == null) return false;
+
+    public String register(User user){
+        if(user == null) return null;
         else {
             if(user.getRole() == null){
                 user.setRole(userRoleManager.DEVELOPER);
-                user.setConfirmed(false);
             }
         }
         try {
+            user.setConfirmed(false);
+            String token=generateNewToken();
+            emailSender.sendEmail(user.getFirstName(),user.getEmail(),token,true);
             userDao.persist(convertUserDtotoUserEntity(user));
+            UserEntity userEntity=userDao.findUserByUsername(user.getUsername());
+            userEntity.setAuxiliarToken(token);
+            return token;
+
+        } catch (MessagingException e) {
+            return null;
+        } catch (UnsupportedEncodingException e) {
+            return null;
+        }
+    }
+
+    public UserResendEmail convertUserEntityToUserResendEmail(UserEntity userEntity){
+        return new UserResendEmail(userEntity.getFirstName(), userEntity.getEmail());
+    }
+    public UserResendEmail getUserResendEmailByToken(String token){
+        UserEntity user=userDao.findUserByAuxiliarToken(token);
+        return convertUserEntityToUserResendEmail(user);
+    }
+
+    public boolean sendNewEmail(String username, String email, String token) {
+        try{
+            emailSender.sendEmail(username,email,token,true);
             return true;
-        } catch (NoResultException e) {
+        }catch (MessagingException e) {
+           return false;
+        } catch (UnsupportedEncodingException e) {
             return false;
         }
     }
+
+    public boolean sendResetPassMail( String email) {
+        UserEntity user=userDao.findUserByEmail(email);
+
+        if(user!=null) {
+            String token = generateNewToken();
+            user.setAuxiliarToken(token);
+            String username = user.getUsername();
+            userDao.updateUser(user);
+
+            try {
+                emailSender.sendEmail(username, email, token, false);
+                return true;
+            } catch (MessagingException e) {
+                return false;
+            } catch (UnsupportedEncodingException e) {
+                return false;
+            }
+        }
+        else return false;
+    }
+
     public boolean checkIfUserExists(User user){
         if(user != null){
             if(user.getUsername() !=null){
@@ -95,6 +150,13 @@ public class UserBean implements Serializable {
             }
         }
         return false;
+    }
+
+    public boolean checkIfemailExists(String email){
+      if (userDao.findUserByEmail(email) != null){
+          return true;
+      }
+      else return false;
     }
 
 
@@ -114,19 +176,52 @@ public class UserBean implements Serializable {
         if(userEntity !=null){
             if(!userEntity.getDeleted()){
                 System.out.println(userEntity);
-                if (userEntity != null){
-                    if (userEntity.getPassword().equals(user.getPassword())){
-                        String token = generateNewToken();
-                        userEntity.setToken(token);
-                        return token;
+                if(userEntity.isConfirmed()) {
+                    if (userEntity != null) {
+                        if (userEntity.getPassword().equals(user.getPassword())) {
+                            String token = generateNewToken();
+                            userEntity.setToken(token);
+                            return token;
+                        }
                     }
-                }
+                }else return userEntity.getToken();
             }
         }
         return null;
     }
+
+
+    public String setNewToken(String token){
+        UserEntity user =userDao.findUserByAuxiliarToken(token);
+        if (user!=null){
+            String newToken=generateNewToken();
+            user.setAuxiliarToken(newToken);
+            userDao.updateUser(user);
+            return newToken;
+        }
+        else return null;
+    }
+
+    public String getUsername(String token){
+        UserEntity user=getUserByToken(token);
+        if (user!=null){
+
+            return user.getUsername();
+        }
+        else return null;
+    }
+    public boolean getConfirmed(LoginDto user){
+        UserEntity userEntity=userDao.findUserByUsername(user.getUsername());
+        return userEntity.isConfirmed();
+    }
     public boolean tokenValidator(String token ){
         if (userDao.findUserByToken(token) != null && token !=null)
+            return true;
+        return false;
+    }
+
+    public boolean auxiliarTokenValidator(String token ){
+        if (userDao.findUserByAuxiliarToken(token) != null && token !=null)
             return true;
         return false;
     }
@@ -252,6 +347,24 @@ public class UserBean implements Serializable {
         }
         return false;
     }
+
+    public boolean updateUserConfirmed(String token, boolean confirmed){
+        UserEntity userEntity=userDao.findUserByAuxiliarToken(token);
+        userEntity.setConfirmed(confirmed);
+        userEntity.setAuxiliarToken(null);
+        return userDao.updateUser(userEntity);
+    }
+
+    public void clearToken(String token){
+        UserEntity user=userDao.findUserByAuxiliarToken(token);
+        user.setAuxiliarToken(null);
+        userDao.updateUser(user);
+    }
+
+    public String getAuxiliarToken(LoginDto user){
+        UserEntity userEntity=userDao.findUserByUsername(user.getUsername());
+        return userEntity.getAuxiliarToken();
+    }
     public boolean oldPasswordConfirmation(String token, String oldPassword, String newPassword){
         UserEntity user = getUserByToken(token);
         if(user != null){
@@ -263,7 +376,7 @@ public class UserBean implements Serializable {
     }
 
     public boolean updatePassWord(String token, String newPassword){
-        UserEntity user = getUserByToken(token);
+        UserEntity user = userDao.findUserByAuxiliarToken(token);
         if(user != null){
             user.setPassword(newPassword);
             return userDao.updateUser(user);
@@ -306,7 +419,8 @@ public class UserBean implements Serializable {
                 userEntity.getFirstName(),
                 userEntity.getPhotoURL(),
                 userEntity.getDeleted(),
-                userEntity.getRole());
+                userEntity.getRole(),
+                userEntity.isConfirmed());
     }
     public List<UserInfoCard> getAllUsersInfo(){
         List<UserEntity> userEntities = userDao.findAllUsers();

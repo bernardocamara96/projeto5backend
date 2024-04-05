@@ -25,6 +25,16 @@ public class UserDao extends AbstractDao<UserEntity> {
 			return null;
 		}
 	}
+
+	public UserEntity findUserByAuxiliarToken(String auxiliarToken) {
+		try {
+			return (UserEntity) em.createNamedQuery("User.findUserByAuxiliarToken").setParameter("auxiliarToken", auxiliarToken)
+					.getSingleResult();
+
+		} catch (NoResultException e) {
+			return null;
+		}
+	}
 	public boolean updateUser(UserEntity user) {
 		try {
 			System.out.println(user);

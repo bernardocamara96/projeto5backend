@@ -9,8 +9,10 @@ import java.util.Set;
 @NamedQuery(name = "User.findUserByUsername", query = "SELECT u FROM UserEntity u WHERE u.username = :username")
 @NamedQuery(name = "User.findUserByEmail", query = "SELECT u FROM UserEntity u WHERE u.email = :email")
 @NamedQuery(name = "User.findUserByToken", query = "SELECT DISTINCT u FROM UserEntity u WHERE u.token = :token")
+@NamedQuery(name = "User.findUserByAuxiliarToken", query = "SELECT DISTINCT u FROM UserEntity u WHERE u.auxiliarToken = :auxiliarToken")
 @NamedQuery(name = "User.findAllUsers", query = "SELECT u FROM UserEntity u")
 @NamedQuery(name= "User.deleteUserById", query="DELETE FROM UserEntity t WHERE t.username = :username")
+
 
 public class UserEntity implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -18,7 +20,7 @@ public class UserEntity implements Serializable {
     @Id
     @Column(name="username", nullable=false, unique = true, updatable = false)
     private String username;
-    @Column(name="password", nullable=false, unique = false, updatable = true)
+    @Column(name="password", nullable=true, unique = false, updatable = true)
     private String password;
     @Column(name="email", nullable=false, unique = true, updatable = true)
     private String email;
@@ -32,6 +34,8 @@ public class UserEntity implements Serializable {
     private String photoURL;
     @Column(name="token", nullable=true, unique = true, updatable = true)
     private String token;
+    @Column(name="auxiliartoken", nullable=true, unique = true, updatable = true)
+    private String auxiliarToken;
     @Column(name="role", nullable=true, unique = false, updatable = true)
     private String role;
     @Column(name="confirmed", nullable = false,unique = false,updatable = true)
@@ -61,6 +65,14 @@ public class UserEntity implements Serializable {
         this.role = role;
         this.deleted = deleted;
         this.confirmed=confirmed;
+    }
+
+    public String getAuxiliarToken() {
+        return auxiliarToken;
+    }
+
+    public void setAuxiliarToken(String auxiliarToken) {
+        this.auxiliarToken = auxiliarToken;
     }
 
     public boolean isConfirmed() {

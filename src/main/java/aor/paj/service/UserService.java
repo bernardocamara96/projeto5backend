@@ -2,10 +2,7 @@ package aor.paj.service;
 
 import aor.paj.bean.PermissionBean;
 import aor.paj.bean.UserBean;
-import aor.paj.dto.LoginDto;
-import aor.paj.dto.User;
-import aor.paj.dto.UserNewPassword;
-import aor.paj.dto.UserWithNoPassword;
+import aor.paj.dto.*;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.status.Function;
 import aor.paj.service.validator.UserValidator;
@@ -14,6 +11,8 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
+
 
 
 @Path("/users")
@@ -49,12 +48,11 @@ public class UserService {
         if (userBean.checkIfemailExists(user)) {
             return Response.status(409).entity("Email already Exists").build();
         }
-        boolean registered = userBean.register(user);
-        if (registered) {
-            return Response.status(200).entity("Thank you for registering with us! To complete your registration and activate your account," +
-                    " please check your email inbox. We've sent you a verification link. Click on the link provided in the email to verify your account and " +
-                    "gain access to our platform. If you don't see the email in your inbox, please check your spam or junk folder. If you encounter any issues, " +
-                    "please contact our support team for assistance. Thank you!").build();
+        String token = userBean.register(user);
+        if (token!=null) {
+            return Response.status(200).entity("{\n" +
+                    "  \"token\": \""+token+"\"\n" +
+                    "}").build();
         } else {
             return Response.status(500).entity("An error occurred while registering the user").build();
         }
@@ -73,9 +71,20 @@ public class UserService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response login(LoginDto user) {
         String token = userBean.login(user);
-       if(token != null)return Response.status(200).entity("{\"token\":\"" + token + "\"}").build();
+        String auxiliarToken= userBean.getAuxiliarToken(user);
+        boolean confirmed = userBean.getConfirmed(user);
+
+        if (token != null) return Response.status(200).entity("{\n" +
+                "  \"token\": \""+token+"\",\n" +
+                "  \"auxiliarToken\": \""+auxiliarToken+"\",\n" +
+                "  \"confirmed\": \""+confirmed+"\"\n" +
+                "}").build();
+
        else return Response.status(401).entity("Login Failed").build();
     }
+
+
+
     /**
      * Retrieves the photo URL and the first name associated with the provided username.
      * If the username and password are not provided in the request headers, returns a status code 401 (Unauthorized)
@@ -147,11 +156,8 @@ public class UserService {
      @Produces(MediaType.APPLICATION_JSON)
      public Response getAllUsers(@HeaderParam("token") String token) {
          if (userBean.tokenValidator(token)) {
-             if(permissionBean.getPermission(token, Function.GET_OTHER_USER_INFO)) {
-                 System.out.println(userBean.getAllUsersInfo());
-                 return Response.status(200).entity(userBean.getAllUsersInfo()).build();
-             }return Response.status(403).entity("Access denied").build();
-         }return Response.status(401).entity("Login Failed").build();
+             return Response.status(200).entity(userBean.getAllUsersInfo()).build();
+         }return Response.status(401).entity("Access denied").build();
      }
 
     /**
@@ -193,6 +199,75 @@ public class UserService {
         }return Response.status(401).entity("Login Failed").build();
     }
 
+
+    @PATCH
+    @Path("/confirmed/{confirmed}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response confirmUser(@PathParam("confirmed") boolean confirmed, @HeaderParam("pass") String pass,@HeaderParam("token") String token) {
+        if (userBean.auxiliarTokenValidator(token)) {
+            boolean updatePass = userBean.updatePassWord(token, pass);
+            boolean updateResult = userBean.updateUserConfirmed(token,confirmed);
+            if (updateResult && updatePass){
+
+                return Response.status(200).entity("User data updated successfully").build();
+            }
+            else return Response.status(500).entity("An error occurred while updating user data").build();
+        }return Response.status(401).entity("Access denied").build();
+    }
+
+    @POST
+    @Path("/newpassemail")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response newPassEmail(@HeaderParam("email") String email) {
+        if (userValidator.validateEmail(email)) {
+            if(userBean.checkIfemailExists(email)) {
+                if (userBean.sendResetPassMail(email)) {
+                    return Response.status(200).entity("Mail sent successfully").build();
+                } else return Response.status(400).entity("Error sending mail").build();
+            }else return Response.status(404).entity("Email not found").build();
+        }else return Response.status(406).entity("Email not valid").build();
+    }
+
+    @GET
+    @Path("/auxiliartokenvalidator")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response auxiliarTokenValidator(@HeaderParam("token") String token) {
+        if (userBean.auxiliarTokenValidator(token)) {
+            return Response.status(200).entity("Token was validated").build();
+        }else return Response.status(404).entity("Token not valid").build();
+    }
+
+
+    @POST
+    @Path("/recoverpassword")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response recoverPassword(@HeaderParam("newPass")String newPass, @HeaderParam("token") String token) {
+        if (userBean.auxiliarTokenValidator(token)) {
+            if (userValidator.validatePassword(newPass)) {
+                boolean updateResult = userBean.updatePassWord(token, newPass);
+                if (updateResult) {
+                    userBean.clearToken(token);
+                    return Response.status(200).entity("User password updated successfully").build();}
+                else return Response.status(500).entity("An error occurred while updating user password").build();
+            }return Response.status(400).entity("Invalid Data").build();
+        }return Response.status(401).entity("Login Failed, Passwords do not match or New password must be different from the old password").build();
+    }
+
+    @POST
+    @Path("/resendemail")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response resendEmail(@HeaderParam("token") String token) {
+        if(userBean.auxiliarTokenValidator(token)){
+            UserResendEmail user=userBean.getUserResendEmailByToken(token);
+            String newToken=userBean.setNewToken(token);
+            if(userBean.sendNewEmail(user.getFirstName(),user.getEmail(),newToken)){
+                return Response.status(200).entity("Email was sent").build();
+            }
+            else return Response.status(401).entity("There was an error sending the email").build();
+        }
+        else return Response.status(401).entity("Access denied").build();
+    }
+
     /**
      * Allows an administrator to edit another user's data, given a specific username. This endpoint
      * ensures that only users with the appropriate permissions can make changes to other user accounts.
@@ -221,6 +296,7 @@ public class UserService {
         }return Response.status(401).entity("Login Failed").build();
     }
 
+
     /**
      * Enables a user to update their password. It requires the old password for verification
      * and checks if the new password meets the system's security requirements. This endpoint
@@ -239,6 +315,7 @@ public class UserService {
             }return Response.status(400).entity("Invalid Data").build();
         }return Response.status(401).entity("Login Failed, Passwords do not match or New password must be different from the old password").build();
     }
+
 
     /**
      * Permanently deletes a user from the system based on the specified username. This operation is irreversible

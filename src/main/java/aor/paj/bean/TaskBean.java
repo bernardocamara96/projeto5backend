@@ -10,6 +10,7 @@ import aor.paj.entity.UserEntity;
 import aor.paj.service.status.userRoleManager;
 import aor.paj.service.validator.TaskValidator;
 import jakarta.ejb.EJB;
+import jakarta.ejb.Stateless;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -23,9 +24,8 @@ import java.util.ArrayList;
  * role in task management within the application, providing a centralized point for task data manipulation and retrieval.
  */
 
-@ApplicationScoped
+@Stateless
 public class TaskBean{
-
     @EJB
     TaskDao taskDao;
     @EJB
@@ -135,6 +135,7 @@ public class TaskBean{
 
     public ArrayList<TaskEntity> getAllTasksByUsername(String username){
         UserEntity user=userDao.findUserByUsername(username);
+
         return taskDao.getTasksByUser(user);
     }
 
@@ -209,6 +210,41 @@ public class TaskBean{
             }
         }
         return tasksDtos;
+    }
+
+    public ArrayList<TaskDto> getTasksByUsernameAndStatus(String username,String status, boolean deleted){
+        UserEntity user=userDao.findUserByUsername(username);
+        if(user!=null) {
+            int statusInt=Integer.parseInt(status);
+            ArrayList<TaskEntity> taskEntities = taskDao.getTasksByStatusAndUser(statusInt, user, deleted);
+            ArrayList<TaskDto> tasksDtos = new ArrayList<>();
+            try {
+                for (TaskEntity task : taskEntities) {
+                    tasksDtos.add(convertTaskEntitytoTaskDto(task));
+                }
+                return tasksDtos;
+            }
+            catch(NullPointerException e){
+                return tasksDtos;
+            }
+        }
+        else return null;
+    }
+
+    public ArrayList<TaskDto> getTasksByUsernameAndDeleted(String username,boolean deleted){
+        UserEntity user=userDao.findUserByUsername(username);
+            ArrayList<TaskEntity> taskEntities = taskDao.getTasksByUserAndDeleted(user, deleted);
+            ArrayList<TaskDto> tasksDtos = new ArrayList<>();
+            try {
+                for (TaskEntity task : taskEntities) {
+                    tasksDtos.add(convertTaskEntitytoTaskDto(task));
+                }
+                return tasksDtos;
+            }
+            catch(NullPointerException e){
+                return tasksDtos;
+            }
+
     }
 
     /*Tests setters*/

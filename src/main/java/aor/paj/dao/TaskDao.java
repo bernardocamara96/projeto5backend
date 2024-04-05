@@ -83,4 +83,27 @@ public class TaskDao extends AbstractDao<TaskEntity> {
 		}
 	}
 
+	public ArrayList<TaskEntity> getTasksByStatusAndUser(int status, UserEntity user, boolean deleted) {
+		try {
+			TypedQuery<TaskEntity> query = em.createNamedQuery("Task.findTasksByStatusAndUser", TaskEntity.class);
+			query.setParameter("status",status);
+			query.setParameter("user",user);
+			query.setParameter("deleted",deleted);
+			return (ArrayList<TaskEntity>) query.getResultList();
+		}catch (Exception e){
+			return null;
+		}
+	}
+
+	public ArrayList<TaskEntity> getTasksByUserAndDeleted(UserEntity user, boolean deleted) {
+		try {
+			TypedQuery<TaskEntity> query = em.createNamedQuery("Task.findTasksByUserAndDeleted", TaskEntity.class);
+			query.setParameter("user",user);
+			query.setParameter("deleted",deleted);
+			return (ArrayList<TaskEntity>) query.getResultList();
+		}catch (Exception e){
+			return null;
+		}
+	}
+
 }
