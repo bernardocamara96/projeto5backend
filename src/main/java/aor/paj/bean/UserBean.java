@@ -155,7 +155,8 @@ public class UserBean implements Serializable {
     }
 
     public boolean checkIfemailExists(String email){
-      if (userDao.findUserByEmail(email) != null){
+        UserEntity user=userDao.findUserByEmail(email);
+      if (user != null && user.isConfirmed()){
           return true;
       }
       else return false;
@@ -217,6 +218,8 @@ public class UserBean implements Serializable {
         UserEntity userEntity=userDao.findUserByUsername(user.getUsername());
         return userEntity.isConfirmed();
     }
+
+
     public boolean tokenValidator(String token ){
         if (userDao.findUserByToken(token) != null && token !=null)
             return true;
@@ -227,6 +230,12 @@ public class UserBean implements Serializable {
         if (userDao.findUserByAuxiliarToken(token) != null && token !=null)
             return true;
         return false;
+    }
+
+    public boolean isConfirmed(String token){
+        UserEntity userEntity=userDao.findUserByAuxiliarToken(token);
+        if(userEntity.isConfirmed()) return true;
+        else return false;
     }
 
     public UserEntity getUserByToken(String token){

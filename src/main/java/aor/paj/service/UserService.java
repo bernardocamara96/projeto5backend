@@ -244,13 +244,15 @@ public class UserService {
     public Response recoverPassword(@HeaderParam("newPass")String newPass, @HeaderParam("token") String token) {
         if (userBean.auxiliarTokenValidator(token)) {
             if (userValidator.validatePassword(newPass)) {
-                boolean updateResult = userBean.updatePassWord(token, newPass);
-                if (updateResult) {
-                    userBean.clearToken(token);
-                    return Response.status(200).entity("User password updated successfully").build();}
-                else return Response.status(500).entity("An error occurred while updating user password").build();
-            }return Response.status(400).entity("Invalid Data").build();
-        }return Response.status(401).entity("Login Failed, Passwords do not match or New password must be different from the old password").build();
+                if(userBean.isConfirmed(token)) {
+                    boolean updateResult = userBean.updatePassWord(token, newPass);
+                    if (updateResult) {
+                        userBean.clearToken(token);
+                        return Response.status(200).entity("User password updated successfully").build();
+                    } else return Response.status(500).entity("An error occurred while updating user password").build();
+                } else return Response.status(404).entity("User still not confirmed").build();
+            } else return Response.status(400).entity("Invalid Data").build();
+        }else return Response.status(401).entity("Login Failed, Passwords do not match or New password must be different from the old password").build();
     }
 
     @POST
