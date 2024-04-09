@@ -9,7 +9,6 @@ import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.status.userRoleManager;
-import com.mysql.cj.log.Log;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
@@ -18,9 +17,7 @@ import jakarta.persistence.NoResultException;
 import jakarta.validation.constraints.Email;
 import org.hibernate.annotations.DialectOverride;
 import util.HashUtil;
-
-
-
+import org.apache.logging.log4j.*;
 
 import java.io.*;
 import java.security.SecureRandom;
@@ -47,6 +44,8 @@ public class UserBean implements Serializable {
     CategoryDao categoryDao;
     @EJB
     EmailSender emailSender;
+
+    private static final Logger logger=LogManager.getLogger(UserBean.class);
 
 
     private UserEntity convertUserDtotoUserEntity(User user){
@@ -86,11 +85,14 @@ public class UserBean implements Serializable {
             userDao.persist(convertUserDtotoUserEntity(user));
             UserEntity userEntity=userDao.findUserByUsername(user.getUsername());
             userEntity.setAuxiliarToken(token);
+
             return token;
 
         } catch (MessagingException e) {
+
             return null;
         } catch (UnsupportedEncodingException e) {
+
             return null;
         }
     }
@@ -181,8 +183,9 @@ public class UserBean implements Serializable {
                         if (userEntity.getPassword().equals(user.getPassword())) {
                             String token = generateNewToken();
                             userEntity.setToken(token);
+                            logger.info(user.getUsername()+": logged in app");
                             return token;
-                        }
+                        }else     logger.error(user.getUsername()+": error logging in app");
                     }
                 }else return userEntity.getToken();
             }

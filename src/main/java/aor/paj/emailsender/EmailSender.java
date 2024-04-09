@@ -44,7 +44,7 @@ public class EmailSender {
                     + "<p><a href='http://localhost:5173/confirmEmail/" + verificationLink + "'>http://localhost:5173/confirmEmail/" + verificationLink + "</a></p>"
                     + "<p>If you did not request this registration, please ignore this email.</p>"
                     + "<p>Thank you,</p>"
-                    + "<p>Antnest Team</p>";
+                    + "<p>AgileFlow Team</p>";
 
         }
         else{
@@ -52,10 +52,10 @@ public class EmailSender {
 
             emailContent = "<p>Dear " + userUsername + "</p>"
 
-                    + "<p>To complete the registration process and gain full access to your account, please click on the link below to confirm your email address:</p>"
+                    + "<p>To reset your password, please click on the link below:</p>"
                     + "<p><a href='http://localhost:5173/resetPassAfter/" + verificationLink + "'>http://localhost:5173/resetPassAfter/" + verificationLink + "</a></p>"
                     + "<p>Thank you,</p>"
-                    + "<p>Antnest Team</p>";
+                    + "<p>AgileFlow Team</p>";
         }
         message.setContent(emailContent, "text/html");
 
