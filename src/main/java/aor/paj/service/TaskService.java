@@ -13,6 +13,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 
@@ -49,11 +50,13 @@ public class TaskService {
     /**
      *method to edit a task with the specified id
      */
-    @PUT
+    @PATCH
     @Path("/edit/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response editTask( @PathParam("id")int id, @HeaderParam("token") String token, TaskDto taskDto) {
+
         if (userBean.tokenValidator(token)) {
+            System.out.println("ENTROU NO EDITIGN TAKS");
             if (taskBean.taskIdValidator(id)) {
                 if(permissionBean.getPermissionByTaskID(token, id)) {
                     taskDto.setStatus(100);
