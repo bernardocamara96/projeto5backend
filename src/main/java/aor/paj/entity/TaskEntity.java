@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table (name="task")
@@ -17,6 +18,12 @@ import java.time.LocalDate;
 @NamedQuery(name="Task.findTasksByCategoryAndUser", query="SELECT t FROM TaskEntity t WHERE t.category = :category AND t.user = :user ORDER BY t.priority DESC,CASE WHEN t.startDate IS NULL THEN 1 ELSE 0 END, t.startDate ASC,CASE WHEN t.endDate IS NULL THEN 1 ELSE 0 END, t.endDate ASC")
 @NamedQuery(name="Task.findTasksByStatusAndUser", query="SELECT t FROM TaskEntity t WHERE t.status=:status AND t.user=:user AND t.deleted=:deleted")
 @NamedQuery(name="Task.findTasksByUserAndDeleted", query="SELECT t FROM TaskEntity t WHERE t.user=:user AND t.deleted=:deleted")
+@NamedQuery(name = "Task.countTasksByUser", query = "SELECT COUNT(t) FROM TaskEntity t WHERE t.user=:user")
+@NamedQuery(name = "Task.countTasksByStatus", query = "SELECT COUNT(t) FROM TaskEntity t WHERE t.status=:status AND t.deleted=false")
+@NamedQuery(name = "Task.countTasksByCategory", query = "SELECT COUNT(t) FROM TaskEntity t WHERE t.category=:category")
+@NamedQuery(name = "Task.calculateAverageConclusionTime", query = "SELECT AVG(CAST(FUNCTION('TIME_TO_SEC', FUNCTION('TIMEDIFF', t.lastDoneDate,t.creationDate )) AS double)) /3600 FROM TaskEntity t WHERE t.lastDoneDate IS NOT NULL")
+@NamedQuery(name = "Task.findAllLastDoneDates", query = "SELECT t.lastDoneDate FROM TaskEntity t WHERE t.lastDoneDate IS NOT NULL")
+
 public class TaskEntity implements Serializable {
 
     private static final long longSerialVersionID=1L;
@@ -41,6 +48,10 @@ public class TaskEntity implements Serializable {
     private LocalDate startDate;
     @Column (name="end_date", nullable = true, unique = false,updatable = true)
     private LocalDate endDate;
+    @Column (name="creation_date", nullable = false, unique = false,updatable = false)
+    private LocalDateTime creationDate;
+    @Column (name="lastDone_date", nullable = true, unique = false,updatable = true)
+    private LocalDateTime lastDoneDate;
 
     @ManyToOne
     //@Column (name="category", nullable = false, unique = false, updatable = true)
@@ -128,6 +139,22 @@ public class TaskEntity implements Serializable {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public LocalDateTime getCreationDate() {
+        return creationDate;
+    }
+
+    public void setCreationDate(LocalDateTime creationDate) {
+        this.creationDate = creationDate;
+    }
+
+    public LocalDateTime getLastDoneDate() {
+        return lastDoneDate;
+    }
+
+    public void setLastDoneDate(LocalDateTime lastDoneDate) {
+        this.lastDoneDate = lastDoneDate;
     }
 
     @Override

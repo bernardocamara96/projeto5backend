@@ -3,10 +3,14 @@ package aor.paj.bean;
 import aor.paj.dao.CategoryDao;
 import aor.paj.dao.TaskDao;
 import aor.paj.dao.UserDao;
+import aor.paj.dto.CategoryDto;
+import aor.paj.dto.StatisticsDto;
 import aor.paj.dto.TaskDto;
+import aor.paj.dto.User;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
+import aor.paj.service.status.taskStatusManager;
 import aor.paj.service.status.userRoleManager;
 import aor.paj.service.validator.TaskValidator;
 import jakarta.ejb.EJB;
@@ -14,7 +18,10 @@ import jakarta.ejb.Stateless;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * TaskBean is an application-scoped bean that manages task operations, including reading from and writing to a JSON file,
@@ -75,6 +82,7 @@ public class TaskBean{
             taskEntity.setDescription(taskDto.getDescription());
             taskEntity.setStatus(100);
             taskEntity.setDeleted(false);
+            taskEntity.setCreationDate(LocalDateTime.now());
             if(taskDto.getStartDate()!=null) {
                 taskEntity.setStartDate(taskDto.getStartDate());
             }
@@ -193,6 +201,9 @@ public class TaskBean{
 
            TaskEntity taskEntity=taskDao.findTaskById(id);
            if(taskEntity.getStatus()!=status) {
+               if(status==taskStatusManager.DONE){
+                   taskEntity.setLastDoneDate(LocalDateTime.now());
+               }
                taskEntity.setStatus(status);
                taskDao.merge(taskEntity);
                return true;
@@ -262,6 +273,80 @@ public class TaskBean{
 
     public void setUserBean(UserBean userBean) {
         this.userBean = userBean;
+    }
+
+    ////DASHBOARD////
+
+    public double averageTasksByUserAndSetConfirmedUsers(StatisticsDto statisticsDto){
+        List<UserEntity> users=userDao.findAllUsers();
+        int tasksNumber=0;
+        int confirmedUsersSize= userBean.countConfirmedUsers();
+        statisticsDto.setConfirmedUsers(confirmedUsersSize);
+        try {
+            for (UserEntity user : users) {
+                if(!user.getUsername().equals("deletedTasks")) {
+                    tasksNumber += taskDao.countTaskByUser(user);
+                }
+            }
+            return  Math.round((tasksNumber / (double)confirmedUsersSize)* 100.0) / 100.0;
+        }catch (ArithmeticException e){
+            return 0;
+        }
+    }
+
+    public int tasksNumberByStatus(int status){
+        try{
+            return taskDao.countTasksByStatus(status);
+        }catch(Exception e){
+            return 0;
+        }
+    }
+
+    public int tasksNumberByCategory(CategoryEntity category){
+        try{
+            return taskDao.countTaskByCategory(category);
+        }catch (Exception e){
+            return 0;
+        }
+    }
+
+    public double calculateTaskAverageConclusionTime(){
+        return Math.round(taskDao.calculateAverageConclusionTime() * 100.0) / 100.0;
+    }
+
+    public int[][] calculateConclusionsByDayAndHour() {
+        // Get conclusion times and app start time from DAO
+        List<LocalDateTime> conclusionTimes = taskDao.getAllConclusionDates();
+        LocalDateTime appStartTime = userDao.getRegisterDate("admin");
+
+        // Calculate the total number of days since the app started
+        long totalDays = Duration.between(appStartTime, LocalDateTime.now()).toDays();
+
+        // Initialize the 2D array to hold counts for each day and hour since the app started
+        int[][] cumulativeTasksByHour = new int[(int) (totalDays + 1)][24];
+
+        int totalCumulativeTasks=0;
+
+        for (LocalDateTime conclusionTime : conclusionTimes) {
+            // Calculate the difference in days between conclusion time and app start time
+            long daysSinceStart = Duration.between(appStartTime, conclusionTime).toDays();
+            // Calculate the hour within the day
+            int hour = conclusionTime.getHour();
+            // Increment the count for the current day and hour
+            if (daysSinceStart >= 0 && daysSinceStart <= totalDays) {
+                cumulativeTasksByHour[(int) daysSinceStart][hour]++;
+            }
+        }
+
+        // Adjust counts to make them cumulative
+        for (int i = 0; i <= totalDays; i++) {
+            for (int j = 0; j < 24; j++) {
+                totalCumulativeTasks+= cumulativeTasksByHour[i][j];
+                cumulativeTasksByHour[i][j] = totalCumulativeTasks;
+            }
+        }
+
+        return cumulativeTasksByHour;
     }
 
 //    public int getLastTaskIdCreated(){

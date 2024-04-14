@@ -21,9 +21,8 @@ import org.apache.logging.log4j.*;
 
 import java.io.*;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
 
 /**
  * UserBean is a managed bean responsible for managing user data within the application. It provides functionality
@@ -62,6 +61,7 @@ public class UserBean implements Serializable {
             userEntity.setPhotoURL(user.getPhotoURL());
             userEntity.setRole(user.getRole());
             userEntity.setConfirmed(user.isConfirmed());
+            userEntity.setRegisterDate(LocalDateTime.now());
             System.out.println(userEntity);
             System.out.println(user);
             return userEntity;
@@ -461,4 +461,35 @@ public class UserBean implements Serializable {
     public int hashCode() {
         return super.hashCode();
     }
+
+    ///DASHBOARD///
+    public int countConfirmedUsers(){
+        try{
+            return userDao.countConfirmedUsers();
+        }catch (ArithmeticException e){
+            return 0;
+        }
+    }
+
+    public int countNotConfirmedUsers(){
+        try{
+            return userDao.countNotConfirmedUsers();
+        }catch (ArithmeticException e){
+            return 0;
+        }
+    }
+
+    public int[] calculateUsersByHour (){
+        List<LocalDateTime> dateOfUsersRegister=userDao.getUsersRegisterDates();
+
+        int[] usersByHour = new int[24];
+
+        for (LocalDateTime registrationDate : dateOfUsersRegister) {
+            int hour = registrationDate.getHour();
+            usersByHour[hour]++;
+        }
+
+        return usersByHour;
+    }
+
 }

@@ -1,14 +1,19 @@
 package aor.paj.dao;
 
 import aor.paj.entity.UserEntity;
+import jakarta.ejb.Local;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.NoResultException;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Stateless
 public class UserDao extends AbstractDao<UserEntity> {
 
+	List<String> excludedUsernames = new ArrayList<>(Arrays.asList("deletedTasks"));
 	private static final long serialVersionUID = 1L;
 
 	public UserDao() {
@@ -82,4 +87,42 @@ public class UserDao extends AbstractDao<UserEntity> {
 			return false;
 		}
 	}
+
+	public int countConfirmedUsers() {
+		try {
+			return  ((Number)em.createNamedQuery("User.countConfirmedUsers").setParameter("excludedUsernames",excludedUsernames).getSingleResult()).intValue();
+
+		} catch (NoResultException e) {
+			return 0;
+		}
+	}
+
+	public int countNotConfirmedUsers() {
+		try {
+			return  ((Number)em.createNamedQuery("User.countNotConfirmedUsers").getSingleResult()).intValue();
+
+		} catch (NoResultException e) {
+			return 0;
+		}
+	}
+
+	public List<LocalDateTime> getUsersRegisterDates() {
+		try {
+			return   em.createNamedQuery("User.findAllRegisterDates").setParameter("excludedUsernames",excludedUsernames).getResultList();
+
+		} catch (NoResultException e) {
+			return null;
+		}
+	}
+
+	public LocalDateTime getRegisterDate(String username) {
+		try {
+			return (LocalDateTime) em.createNamedQuery("User.findRegisterDateByUsername").setParameter("username", username)
+					.getSingleResult();
+
+		} catch (NoResultException e) {
+			return null;
+		}
+	}
+
 }

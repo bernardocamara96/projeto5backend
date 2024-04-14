@@ -1,8 +1,10 @@
 package aor.paj.entity;
 
+import jakarta.ejb.Local;
 import jakarta.persistence.*;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Set;
 @Entity
 @Table(name="user")
@@ -12,7 +14,10 @@ import java.util.Set;
 @NamedQuery(name = "User.findUserByAuxiliarToken", query = "SELECT DISTINCT u FROM UserEntity u WHERE u.auxiliarToken = :auxiliarToken")
 @NamedQuery(name = "User.findAllUsers", query = "SELECT u FROM UserEntity u")
 @NamedQuery(name= "User.deleteUserById", query="DELETE FROM UserEntity t WHERE t.username = :username")
-
+@NamedQuery(name = "User.countConfirmedUsers", query = "SELECT COUNT(u) FROM UserEntity u WHERE u.confirmed=true AND u.username NOT IN :excludedUsernames")
+@NamedQuery(name = "User.countNotConfirmedUsers", query = "SELECT COUNT(u) FROM UserEntity u WHERE u.confirmed=false")
+@NamedQuery(name = "User.findAllRegisterDates", query = "SELECT u.registerDate FROM UserEntity u WHERE u.username NOT IN :excludedUsernames")
+@NamedQuery(name = "User.findRegisterDateByUsername", query = "SELECT u.registerDate FROM UserEntity u WHERE u.username=:username")
 
 public class UserEntity implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -42,6 +47,8 @@ public class UserEntity implements Serializable {
     private boolean confirmed;
     @Column(name="deleted", nullable = false,unique = false,updatable = true)
     private boolean deleted;
+    @Column(name="register_date", nullable = false,unique = false,updatable = false)
+    private LocalDateTime registerDate;
 
     @OneToMany(mappedBy = "user")
     private Set<TaskEntity> tasks;
@@ -65,6 +72,7 @@ public class UserEntity implements Serializable {
         this.role = role;
         this.deleted = deleted;
         this.confirmed=confirmed;
+        this.registerDate=LocalDateTime.now();
     }
 
     public String getAuxiliarToken() {
@@ -171,6 +179,22 @@ public class UserEntity implements Serializable {
 
     public void setDeleted(boolean deleted) {
         this.deleted = deleted;
+    }
+
+    public LocalDateTime getRegisterDate() {
+        return registerDate;
+    }
+
+    public void setRegisterDate(LocalDateTime registerDate) {
+        this.registerDate = registerDate;
+    }
+
+    public Set<CategoryEntity> getCategories() {
+        return categories;
+    }
+
+    public void setCategories(Set<CategoryEntity> categories) {
+        this.categories = categories;
     }
 
     @Override

@@ -38,6 +38,7 @@ public class PermissionBean {
         productOwnerPermissions.add(Function.DELETE_ALL_TASKS_BY_USER_TEMPORARILY);
         productOwnerPermissions.add(Function.DELETE_TASK_PERMANENTLY);
         productOwnerPermissions.add(Function.GET_ALL_TASKS_DELETED);
+        productOwnerPermissions.add(Function.GET_STATISTICS);
 
         //Scrum Master
         HashSet<Function> scrumMasterPermissions = new HashSet<>();
@@ -57,6 +58,7 @@ public class PermissionBean {
         rolePermissions.put(userRoleManager.PRODUCT_OWNER, productOwnerPermissions);
         rolePermissions.put(userRoleManager.SCRUM_MASTER, scrumMasterPermissions);
         rolePermissions.put(userRoleManager.DEVELOPER, developerPermissions);
+
     }
 
     public String getRoleByToken(String token){

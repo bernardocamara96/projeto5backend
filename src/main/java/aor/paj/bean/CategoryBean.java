@@ -3,6 +3,8 @@ package aor.paj.bean;
 import aor.paj.dao.CategoryDao;
 import aor.paj.dao.UserDao;
 import aor.paj.dto.CategoryDto;
+import aor.paj.dto.CategoryStatsDto;
+import aor.paj.dto.StatisticsDto;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.status.userRoleManager;
@@ -30,6 +32,15 @@ public class CategoryBean implements Serializable {
         categoryDto.setOwner_username(categoryEntity.getAuthor().getUsername());
         categoryDto.setType(categoryEntity.getType());
         return  categoryDto;
+    }
+
+    public CategoryStatsDto convertCategoryEntitytoCategoryStatsDto(CategoryEntity categoryEntity){
+        CategoryStatsDto categoryStatsDto=new CategoryStatsDto();
+        categoryStatsDto.setId(categoryEntity.getId());
+        categoryStatsDto.setOwner_username(categoryEntity.getAuthor().getUsername());
+        categoryStatsDto.setType(categoryEntity.getType());
+        categoryStatsDto.setTasksNumber(taskBean.tasksNumberByCategory(categoryEntity));
+        return  categoryStatsDto;
     }
     public void createDefaultCategoryIfNotExistent(){
         CategoryEntity defaultCategory = categoryDao.findCategoryByType("No_Category");
@@ -85,5 +96,30 @@ public class CategoryBean implements Serializable {
             return true;
         }
         else return false;
+    }
+
+    public ArrayList<CategoryStatsDto> ordenedCategoriesList(){
+        ArrayList<CategoryEntity> categories=getAllCategories();
+        ArrayList<CategoryStatsDto> categoriesDto=new ArrayList<>();
+
+        int n = categories.size();
+
+        for(CategoryEntity category:categories){
+            categoriesDto.add(convertCategoryEntitytoCategoryStatsDto(category));
+        }
+
+        for (int i = 0; i < n - 1; i++) {
+            for (int j = 0; j < n - i - 1; j++) {
+                if (categoriesDto.get(j).getTasksNumber() < categoriesDto.get(j + 1).getTasksNumber()) {
+                    // Swap list[j] and list[j+1]
+                    CategoryStatsDto temp = categoriesDto.get(j);
+                    categoriesDto.set(j, categoriesDto.get(j + 1));
+                    categoriesDto.set(j + 1, temp);
+                }
+            }
+        }
+
+
+        return categoriesDto;
     }
 }
