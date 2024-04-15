@@ -10,6 +10,7 @@ import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.status.userRoleManager;
 import jakarta.ejb.EJB;
+import jakarta.ejb.Local;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 import jakarta.mail.MessagingException;
@@ -21,6 +22,7 @@ import org.apache.logging.log4j.*;
 
 import java.io.*;
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -479,17 +481,42 @@ public class UserBean implements Serializable {
         }
     }
 
-    public int[] calculateUsersByHour (){
-        List<LocalDateTime> dateOfUsersRegister=userDao.getUsersRegisterDates();
+    public ArrayList<Integer> calculateUsersByHour (){
+        List<LocalDateTime> dateOfUsersRegister = userDao.getUsersRegisterDates();
 
-        int[] usersByHour = new int[24];
+        LocalDateTime appCreationDate = userDao.getRegisterDate("admin"); // Replace this with the actual app creation date
+        LocalDateTime presentDate = LocalDateTime.now(); // Current date and time
 
+        // Calculate the total number of hours between app creation date and present date
+        long totalHours = appCreationDate.until(presentDate, java.time.temporal.ChronoUnit.HOURS);
+
+        // Initialize an ArrayList to store the number of users registered in each hour
+        ArrayList<Integer> usersByHour = new ArrayList<>(Collections.nCopies((int) totalHours+1, 0));
+
+        // Iterate over each registration date and increment the corresponding hour in the ArrayList
         for (LocalDateTime registrationDate : dateOfUsersRegister) {
-            int hour = registrationDate.getHour();
-            usersByHour[hour]++;
+            // Calculate the difference in hours between app creation date and registration date
+            long hoursSinceCreation = appCreationDate.until(registrationDate, java.time.temporal.ChronoUnit.HOURS);
+
+            // Increment the corresponding hour in the ArrayList
+            if (hoursSinceCreation >= 0 && hoursSinceCreation <= totalHours) {
+                int hourIndex = (int) hoursSinceCreation;
+                int currentUsers = usersByHour.get(hourIndex);
+                usersByHour.set(hourIndex, currentUsers + 1);
+            }
+        }
+        int cumulativeCount = 0;
+        for (int i = 0; i <  usersByHour.size(); i++) {
+            cumulativeCount +=   usersByHour.get(i);
+            usersByHour.set(i, cumulativeCount);
         }
 
         return usersByHour;
     }
+
+    public LocalDateTime getAppCreationDate(){
+       return userDao.getRegisterDate("admin");
+    }
+
 
 }

@@ -21,6 +21,7 @@ import jakarta.inject.Inject;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -314,36 +315,33 @@ public class TaskBean{
         return Math.round(taskDao.calculateAverageConclusionTime() * 100.0) / 100.0;
     }
 
-    public int[][] calculateConclusionsByDayAndHour() {
+    public ArrayList<Integer> calculateConclusionsByDayAndHour() {
         // Get conclusion times and app start time from DAO
-        List<LocalDateTime> conclusionTimes = taskDao.getAllConclusionDates();
-        LocalDateTime appStartTime = userDao.getRegisterDate("admin");
+        List<LocalDateTime> conclusionDates = taskDao.getAllConclusionDates();
+        LocalDateTime appCreationDate = userDao.getRegisterDate("admin");
+        LocalDateTime presentDate = LocalDateTime.now(); // Current date and time
 
-        // Calculate the total number of days since the app started
-        long totalDays = Duration.between(appStartTime, LocalDateTime.now()).toDays();
+        long totalHours = appCreationDate.until(presentDate, java.time.temporal.ChronoUnit.HOURS);
 
-        // Initialize the 2D array to hold counts for each day and hour since the app started
-        int[][] cumulativeTasksByHour = new int[(int) (totalDays + 1)][24];
+        // Initialize an ArrayList to store the cumulative number of tasks concluded per hour
+        ArrayList<Integer> cumulativeTasksByHour = new ArrayList<>(Collections.nCopies((int) totalHours+1, 0));
 
-        int totalCumulativeTasks=0;
+        // Iterate over each conclusion date and accumulate the corresponding hour in the ArrayList
+        for (LocalDateTime conclusionDate : conclusionDates) {
+            // Calculate the difference in hours between app creation date and conclusion date
+            long hoursSinceCreation = appCreationDate.until(conclusionDate, java.time.temporal.ChronoUnit.HOURS);
 
-        for (LocalDateTime conclusionTime : conclusionTimes) {
-            // Calculate the difference in days between conclusion time and app start time
-            long daysSinceStart = Duration.between(appStartTime, conclusionTime).toDays();
-            // Calculate the hour within the day
-            int hour = conclusionTime.getHour();
-            // Increment the count for the current day and hour
-            if (daysSinceStart >= 0 && daysSinceStart <= totalDays) {
-                cumulativeTasksByHour[(int) daysSinceStart][hour]++;
+            // Increment the corresponding hour in the ArrayList
+            if (hoursSinceCreation >= 0 && hoursSinceCreation <= totalHours) {
+                int hourIndex = (int) hoursSinceCreation;
+                int currentTasks = cumulativeTasksByHour.get(hourIndex);
+                cumulativeTasksByHour.set(hourIndex, currentTasks + 1);
             }
         }
 
-        // Adjust counts to make them cumulative
-        for (int i = 0; i <= totalDays; i++) {
-            for (int j = 0; j < 24; j++) {
-                totalCumulativeTasks+= cumulativeTasksByHour[i][j];
-                cumulativeTasksByHour[i][j] = totalCumulativeTasks;
-            }
+        // Calculate cumulative tasks conclusions
+        for (int i = 1; i < cumulativeTasksByHour.size(); i++) {
+            cumulativeTasksByHour.set(i, cumulativeTasksByHour.get(i - 1) + cumulativeTasksByHour.get(i));
         }
 
         return cumulativeTasksByHour;

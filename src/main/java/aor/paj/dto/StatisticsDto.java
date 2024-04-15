@@ -3,6 +3,7 @@ package aor.paj.dto;
 import jakarta.xml.bind.annotation.XmlElement;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 public class StatisticsDto {
@@ -19,9 +20,11 @@ public class StatisticsDto {
     @XmlElement
     private double averageConclusionTime;
     @XmlElement
-    private int[] numberOfUsersRegisterByHour;
+    private ArrayList<Integer> numberOfUsersRegisterByHour;
     @XmlElement
-    private int[][] cumulativeTasksNumberByHour;
+    private ArrayList<Integer> cumulativeTasksNumberByHour;
+    @XmlElement
+    private LocalDateTime[] appHoursArray;
 
     public StatisticsDto() {
 
@@ -76,19 +79,27 @@ public class StatisticsDto {
     }
 
 
-    public int[] getNumberOfUsersRegisterByHour() {
+    public ArrayList<Integer> getNumberOfUsersRegisterByHour() {
         return numberOfUsersRegisterByHour;
     }
 
-    public void setNumberOfUsersRegisterByHour(int[] numberOfUsersRegisterByHour) {
+    public void setNumberOfUsersRegisterByHour(ArrayList<Integer> numberOfUsersRegisterByHour) {
         this.numberOfUsersRegisterByHour = numberOfUsersRegisterByHour;
     }
 
-    public int[][] getCumulativeTasksNumberByHour() {
+    public ArrayList<Integer> getCumulativeTasksNumberByHour() {
         return cumulativeTasksNumberByHour;
     }
 
-    public void setCumulativeTasksNumberByHour(int[][] cumulativeTasksNumberByHour) {
+    public void setCumulativeTasksNumberByHour(ArrayList<Integer> cumulativeTasksNumberByHour) {
         this.cumulativeTasksNumberByHour = cumulativeTasksNumberByHour;
+    }
+
+    public LocalDateTime[] getAppHoursArray() {
+        return appHoursArray;
+    }
+
+    public void setAppHoursArray(LocalDateTime[] appHoursArray) {
+        this.appHoursArray = appHoursArray;
     }
 }
