@@ -13,10 +13,15 @@ public class StartupBean {
     @Inject
     CategoryBean categoryBean;
 
+    @Inject
+    AppConfigurationsBean appConfigurationsBean;
+
     @PostConstruct
     public void init() {
         // Chama o método para criar o ProductOwner se não existir
         userBean.createDefaultUsersIfNotExistent();
         categoryBean.createDefaultCategoryIfNotExistent();
+        appConfigurationsBean.createDefaultAppConfigurations();
+
     }
 }

@@ -1,5 +1,6 @@
 package aor.paj.service;
 
+import aor.paj.bean.AppConfigurationsBean;
 import aor.paj.bean.PermissionBean;
 import aor.paj.bean.UserBean;
 import aor.paj.dto.*;
@@ -24,6 +25,8 @@ public class UserService {
     UserValidator userValidator;
     @EJB
     PermissionBean permissionBean;
+    @EJB
+    AppConfigurationsBean appConfigurationsBean;
 
     /**
      * This endpoint is responsible for adding a new user to the system. It accepts JSON-formatted requests
@@ -74,12 +77,14 @@ public class UserService {
         String auxiliarToken= userBean.getAuxiliarToken(user);
         boolean confirmed = userBean.getConfirmed(user);
 
-        if (token != null) return Response.status(200).entity("{\n" +
-                "  \"token\": \""+token+"\",\n" +
-                "  \"auxiliarToken\": \""+auxiliarToken+"\",\n" +
-                "  \"confirmed\": \""+confirmed+"\"\n" +
-                "}").build();
-
+        if (token != null) {
+            appConfigurationsBean.setLastActivityDate(token);
+            return Response.status(200).entity("{\n" +
+                    "  \"token\": \"" + token + "\",\n" +
+                    "  \"auxiliarToken\": \"" + auxiliarToken + "\",\n" +
+                    "  \"confirmed\": \"" + confirmed + "\"\n" +
+                    "}").build();
+        }
        else return Response.status(401).entity("Login Failed").build();
     }
 
@@ -98,11 +103,15 @@ public class UserService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPhoto(@HeaderParam("token")String token) {
         if (userBean.tokenValidator(token)) {
-            String photoUrl = userBean.getPhotoURLByUsername(token);
-            String name = userBean.getFirstNameByToken(token);
-            String role = userBean.getRoleByToken(token);
-            if(photoUrl != null) return Response.status(200).entity("{\"photoUrl\":\"" + photoUrl + "\", \"name\":\"" + name + "\", \"role\":\"" + role + "\"}").build();
-            return Response.status(404).entity("No photo found").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                String photoUrl = userBean.getPhotoURLByUsername(token);
+                String name = userBean.getFirstNameByToken(token);
+                String role = userBean.getRoleByToken(token);
+                if (photoUrl != null) {
+                    appConfigurationsBean.setLastActivityDate(token);
+                    return Response.status(200).entity("{\"photoUrl\":\"" + photoUrl + "\", \"name\":\"" + name + "\", \"role\":\"" + role + "\"}").build();}
+                return Response.status(404).entity("No photo found").build();
+            } else return Response.status(401).entity("Session has expired").build();
         } else return Response.status(403).entity("Access denied").build();
     }
 
@@ -117,12 +126,17 @@ public class UserService {
     @GET
     @Path("/info")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response userInfo(@HeaderParam("username") String username) {
-        if (userBean.checkIfUserExists(username)) {
-            UserEntity userEntity = userBean.getUserByUsername(username);
-            UserWithNoPassword userWithoutPassword = userBean.convertUserEntityToUserWithNoPassword(userEntity);
-            return Response.status(200).entity(userWithoutPassword).build();
-        } else return Response.status(403).entity("Access denied").build();
+    public Response userInfo(@HeaderParam("username") String username, @HeaderParam("token")String token) {
+        if(userBean.tokenValidator(token)) {
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (userBean.checkIfUserExists(username)) {
+                    UserEntity userEntity = userBean.getUserByUsername(username);
+                    UserWithNoPassword userWithoutPassword = userBean.convertUserEntityToUserWithNoPassword(userEntity);
+                    appConfigurationsBean.setLastActivityDate(token);
+                    return Response.status(200).entity(userWithoutPassword).build();
+                } else return Response.status(403).entity("Access denied").build();
+            } else return Response.status(401).entity("Session has expired").build();
+        }else return Response.status(403).entity("Access denied").build();
     }
 
     /**
@@ -138,11 +152,15 @@ public class UserService {
         if(username == null)
             return Response.status(400).entity("Invalid Data").build();
         else if (userBean.tokenValidator(token)) {
-            if(permissionBean.getPermission(token, Function.GET_OTHER_USER_INFO)){
-                UserEntity userEntity = userBean.getUserByUsername(username);
-                UserWithNoPassword userWithoutPassword = userBean.convertUserEntityToUserWithNoPassword(userEntity);
-                return Response.status(200).entity(userWithoutPassword).build();
-            }else return Response.status(403).entity("User permissions violated").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.GET_OTHER_USER_INFO)) {
+                    UserEntity userEntity = userBean.getUserByUsername(username);
+                    UserWithNoPassword userWithoutPassword = userBean.convertUserEntityToUserWithNoPassword(userEntity);
+                    appConfigurationsBean.setLastActivityDate(token);
+                    return Response.status(200).entity(userWithoutPassword).build();
+                } else return Response.status(403).entity("User permissions violated").build();
+
+            }else return Response.status(401).entity("Session has expired").build();
         } else return Response.status(401).entity("Login Failed").build();
     }
 
@@ -156,7 +174,10 @@ public class UserService {
      @Produces(MediaType.APPLICATION_JSON)
      public Response getAllUsers(@HeaderParam("token") String token) {
          if (userBean.tokenValidator(token)) {
-             return Response.status(200).entity(userBean.getAllUsersInfo()).build();
+             if(appConfigurationsBean.validateTimeout(token)) {
+                 appConfigurationsBean.setLastActivityDate(token);
+                 return Response.status(200).entity(userBean.getAllUsersInfo()).build();
+             }else return Response.status(401).entity("Session has expired").build();
          }return Response.status(401).entity("Access denied").build();
      }
 
@@ -170,12 +191,12 @@ public class UserService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRole(@HeaderParam("token")String token){
         if(userBean.tokenValidator(token)){
-
-            String role=userBean.getRoleByToken(token);
-            System.out.println("role "+role);
-            return Response.status(200).entity("{\"role\":\"" + role + "\"}").build();
-        }
-        else return Response.status(403).entity("User permissions violated").build();
+            if(appConfigurationsBean.validateTimeout(token)){
+                String role=userBean.getRoleByToken(token);
+                appConfigurationsBean.setLastActivityDate(token);
+                return Response.status(200).entity("{\"role\":\"" + role + "\"}").build();
+            }else return Response.status(401).entity("Session has expired").build();
+        } else return Response.status(403).entity("User permissions violated").build();
     }
     /**
      * Allows an authenticated user to update their own data. It checks for valid authentication and
@@ -187,15 +208,23 @@ public class UserService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response editUserData(User updatedUser, @HeaderParam("token") String token) {
         if (userBean.tokenValidator(token)) {
-            if(permissionBean.getPermission(token, Function.EDIT_OWN_USER_INFO)){
-                if (userValidator.validateUserOnEdit(updatedUser) && updatedUser.getUsername() == null) {
-                    if (!userBean.checkIfUserExists(updatedUser)) {
-                        boolean updateResult = userBean.updateUser(token, updatedUser);
-                        if (updateResult) return Response.status(200).entity("User data updated successfully").build();
-                        else return Response.status(500).entity("An error occurred while updating user data").build();
-                    }return Response.status(409).entity("Username or Email already Exists").build();
-                }return Response.status(400).entity("Invalid Data").build();
-            }return Response.status(403).entity("Access denied").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.EDIT_OWN_USER_INFO)) {
+                    if (userValidator.validateUserOnEdit(updatedUser) && updatedUser.getUsername() == null) {
+                        if (!userBean.checkIfUserExists(updatedUser)) {
+                            boolean updateResult = userBean.updateUser(token, updatedUser);
+                            if (updateResult){
+                                appConfigurationsBean.setLastActivityDate(token);
+                                return Response.status(200).entity("User data updated successfully").build();}
+                            else
+                                return Response.status(500).entity("An error occurred while updating user data").build();
+                        }
+                        return Response.status(409).entity("Username or Email already Exists").build();
+                    }
+                    return Response.status(400).entity("Invalid Data").build();
+                }
+                return Response.status(403).entity("Access denied").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }return Response.status(401).entity("Login Failed").build();
     }
 
@@ -282,19 +311,27 @@ public class UserService {
     public Response adminEditUserData(User updatedUser, @HeaderParam("token") String token,
                                       @HeaderParam("userToChangeUsername") String username) {
         if (userBean.tokenValidator(token)) {
-            if(permissionBean.getPermission(token, Function.EDIT_OTHER_USER_INFO)) {
-                if (userValidator.validateUserOnEdit(updatedUser) && updatedUser.getUsername() == null)  {
-                    if (userBean.checkIfUserExists(username)) {
-                        if(!userBean.checkIfemailExists(updatedUser)) {
-                            boolean updateResult = userBean.updateUserByUsername(token, username, updatedUser);
-                            if (updateResult)
-                                return Response.status(200).entity("User data updated successfully").build();
-                            else
-                                return Response.status(400).entity("An error occurred while updating user data").build();
-                        } return Response.status(409).entity("Username or Email already Exists").build();
-                    }return Response.status(409).entity("Username do not Exists").build();
-                }return Response.status(400).entity("Invalid Data").build();
-            }return Response.status(403).entity("Access denied").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.EDIT_OTHER_USER_INFO)) {
+                    if (userValidator.validateUserOnEdit(updatedUser) && updatedUser.getUsername() == null) {
+                        if (userBean.checkIfUserExists(username)) {
+                            if (!userBean.checkIfemailExists(updatedUser)) {
+                                boolean updateResult = userBean.updateUserByUsername(token, username, updatedUser);
+                                if (updateResult){
+                                    appConfigurationsBean.setLastActivityDate(token);
+                                    return Response.status(200).entity("User data updated successfully").build();}
+                                else
+                                    return Response.status(400).entity("An error occurred while updating user data").build();
+                            }
+                            return Response.status(409).entity("Username or Email already Exists").build();
+                        }
+                        return Response.status(409).entity("Username do not Exists").build();
+                    }
+                    return Response.status(400).entity("Invalid Data").build();
+                }
+                return Response.status(403).entity("Access denied").build();
+
+            }else return Response.status(401).entity("Session has expired").build();
         }return Response.status(401).entity("Login Failed").build();
     }
 
@@ -310,11 +347,16 @@ public class UserService {
     public Response editUserPassword(UserNewPassword updatedPassword, @HeaderParam("token") String token) {
         if (userBean.tokenValidator(token) && userBean.oldPasswordConfirmation(token, updatedPassword.getPassword(),
                 updatedPassword.getNewPassword())) {
-            if (userValidator.validatePassword(updatedPassword.getNewPassword())) {
-                boolean updateResult = userBean.updatePassWord(token, updatedPassword.getNewPassword());
-                if (updateResult) return Response.status(200).entity("User password updated successfully").build();
-                else return Response.status(500).entity("An error occurred while updating user password").build();
-            }return Response.status(400).entity("Invalid Data").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (userValidator.validatePassword(updatedPassword.getNewPassword())) {
+                    boolean updateResult = userBean.updatePassWord(token, updatedPassword.getNewPassword());
+                    if (updateResult){
+                        appConfigurationsBean.setLastActivityDate(token);
+                        return Response.status(200).entity("User password updated successfully").build();}
+                    else return Response.status(500).entity("An error occurred while updating user password").build();
+                }
+                return Response.status(400).entity("Invalid Data").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }return Response.status(401).entity("Login Failed, Passwords do not match or New password must be different from the old password").build();
     }
 
@@ -330,18 +372,21 @@ public class UserService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response deleteTaskPermanently(@HeaderParam("token")String token, @HeaderParam("userToDeleteUsername")String username){
         if(userBean.tokenValidator(token)){
-            if(permissionBean.getPermission(token, Function.PERMANENTLY_USER_DELET)){
-                if(userBean.checkIfUserExists(username)) {
-                    if(!username.equals("admin") && !username.equals("deletedTasks")) {
-                        userBean.transferTasks(username);
-                        userBean.transferCategories(username);
-                        boolean successfullyDeleted = userBean.deleteUserPermanetely(username);
-                        if (successfullyDeleted)
-                            return Response.status(200).entity("This user permanently deleted ").build();
-                        else return Response.status(400).entity("User not deleted").build();
-                    }else return Response.status(400).entity("Admin can't be deleted.").build();
-                } else return Response.status(400).entity("User with this id not found").build();
-            } else return Response.status(403).entity("User permissions violated").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.PERMANENTLY_USER_DELET)) {
+                    if (userBean.checkIfUserExists(username)) {
+                        if (!username.equals("admin") && !username.equals("deletedTasks")) {
+                            userBean.transferTasks(username);
+                            userBean.transferCategories(username);
+                            boolean successfullyDeleted = userBean.deleteUserPermanetely(username);
+                            if (successfullyDeleted){
+                                appConfigurationsBean.setLastActivityDate(token);
+                                return Response.status(200).entity("This user permanently deleted ").build();}
+                            else return Response.status(400).entity("User not deleted").build();
+                        } else return Response.status(400).entity("Admin can't be deleted.").build();
+                    } else return Response.status(400).entity("User with this id not found").build();
+                } else return Response.status(403).entity("User permissions violated").build();
+            }else return Response.status(401).entity("Session has expired").build();
         } else return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -362,4 +407,32 @@ public class UserService {
         return Response.status(200).entity("User logged out successfully").build();
     }
 
+    @GET
+    @Path("/configuration/{name}")
+    public Response getConfigurationValue(@HeaderParam("token")String token, @PathParam("name")String name) {
+      if (userBean.tokenValidator(token)) {
+          if(appConfigurationsBean.validateTimeout(token)) {
+              return Response.status(200).entity(appConfigurationsBean.getConfigurationValueByName(name)).build();
+          }else return Response.status(401).entity("Session has expired").build();
+      }else return Response.status(403).entity("Access denied").build();
+    }
+
+    @PATCH
+    @Path("/configuration/{name}/{value}")
+    public Response getConfigurationValue(@HeaderParam("token")String token, @PathParam("name")String name, @PathParam("value")String value) {
+      long valueLong=0;
+      try {
+          valueLong = Long.parseLong(value);
+      }catch (NumberFormatException e){
+           return Response.status(400).entity("Invalid data").build();
+      }
+
+        if (userBean.tokenValidator(token)) {
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if(appConfigurationsBean.setConfigurationValue(valueLong,name)) {
+                    return Response.status(200).entity("Configurations updated successfully").build();
+                }else  return Response.status(400).entity("Invalid data").build();
+            }else return Response.status(401).entity("Session has expired").build();
+        }else return Response.status(403).entity("Access denied").build();
+    }
 }

@@ -1,10 +1,15 @@
 package aor.paj.dao;
 
+import aor.paj.entity.CategoryEntity;
+import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
 import jakarta.ejb.Local;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.NoResultException;
+import jakarta.persistence.Query;
+import jakarta.persistence.TypedQuery;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -75,7 +80,7 @@ public class UserDao extends AbstractDao<UserEntity> {
 			return (UserEntity) em.createNamedQuery("User.findUserByUsername").setParameter("username", username)
 					.getSingleResult();
 
-		} catch (NoResultException e) {
+		} catch (NoResultException | NullPointerException e) {
 			return null;
 		}
 	}
@@ -123,6 +128,35 @@ public class UserDao extends AbstractDao<UserEntity> {
 		} catch (NoResultException e) {
 			return null;
 		}
+	}
+
+	public LocalDateTime getLastActivityDate(String token) {
+		try {
+			return (LocalDateTime) em.createNamedQuery("User.findLastActivityDateByToken").setParameter("token", token)
+					.getSingleResult();
+
+		} catch (NoResultException e) {
+			return null;
+		}
+	}
+
+	public boolean setLastActivityDate(LocalDateTime lastActivityDate, String token){
+		try{
+		Query query = em.createNamedQuery("User.updateLastActivityDateByToken");
+		query.setParameter("lastActivityDate", lastActivityDate);
+		query.setParameter("token", token);
+
+		int updatedRows = query.executeUpdate();
+
+		if (updatedRows == 1) {
+			return true;
+		} else {
+			return false;
+		}
+	} catch (Exception e) {
+		e.printStackTrace(); // Handle the exception appropriately
+		return false;
+	}
 	}
 
 }

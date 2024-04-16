@@ -1,5 +1,6 @@
 package aor.paj.bean;
 
+import aor.paj.dao.AppConfigurationsDao;
 import aor.paj.dao.CategoryDao;
 import aor.paj.dao.TaskDao;
 import aor.paj.dao.UserDao;
@@ -22,6 +23,7 @@ import org.apache.logging.log4j.*;
 
 import java.io.*;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -45,16 +47,18 @@ public class UserBean implements Serializable {
     CategoryDao categoryDao;
     @EJB
     EmailSender emailSender;
+    @EJB
+    AppConfigurationsDao appConfigurationsDao;
 
-    private static final Logger logger=LogManager.getLogger(UserBean.class);
+    private static final Logger logger = LogManager.getLogger(UserBean.class);
 
 
-    private UserEntity convertUserDtotoUserEntity(User user){
+    private UserEntity convertUserDtotoUserEntity(User user) {
         UserEntity userEntity = new UserEntity();
-        if(userEntity != null){
+        if (userEntity != null) {
             userEntity.setUsername(user.getUsername());
-            if(user.getPassword()!=null && !user.getPassword().isEmpty())
-            userEntity.setPassword(user.getPassword());
+            if (user.getPassword() != null && !user.getPassword().isEmpty())
+                userEntity.setPassword(user.getPassword());
             userEntity.setEmail(user.getEmail());
             userEntity.setFirstName(user.getFirstName());
             userEntity.setLastName(user.getLastName());
@@ -72,20 +76,19 @@ public class UserBean implements Serializable {
     }
 
 
-
-    public String register(User user){
-        if(user == null) return null;
+    public String register(User user) {
+        if (user == null) return null;
         else {
-            if(user.getRole() == null){
+            if (user.getRole() == null) {
                 user.setRole(userRoleManager.DEVELOPER);
             }
         }
         try {
             user.setConfirmed(false);
-            String token=generateNewToken();
-            emailSender.sendEmail(user.getFirstName(),user.getEmail(),token,true);
+            String token = generateNewToken();
+            emailSender.sendEmail(user.getFirstName(), user.getEmail(), token, true);
             userDao.persist(convertUserDtotoUserEntity(user));
-            UserEntity userEntity=userDao.findUserByUsername(user.getUsername());
+            UserEntity userEntity = userDao.findUserByUsername(user.getUsername());
             userEntity.setAuxiliarToken(token);
 
             return token;
@@ -99,29 +102,30 @@ public class UserBean implements Serializable {
         }
     }
 
-    public UserResendEmail convertUserEntityToUserResendEmail(UserEntity userEntity){
+    public UserResendEmail convertUserEntityToUserResendEmail(UserEntity userEntity) {
         return new UserResendEmail(userEntity.getFirstName(), userEntity.getEmail());
     }
-    public UserResendEmail getUserResendEmailByToken(String token){
-        UserEntity user=userDao.findUserByAuxiliarToken(token);
+
+    public UserResendEmail getUserResendEmailByToken(String token) {
+        UserEntity user = userDao.findUserByAuxiliarToken(token);
         return convertUserEntityToUserResendEmail(user);
     }
 
     public boolean sendNewEmail(String username, String email, String token) {
-        try{
-            emailSender.sendEmail(username,email,token,true);
+        try {
+            emailSender.sendEmail(username, email, token, true);
             return true;
-        }catch (MessagingException e) {
-           return false;
+        } catch (MessagingException e) {
+            return false;
         } catch (UnsupportedEncodingException e) {
             return false;
         }
     }
 
-    public boolean sendResetPassMail( String email) {
-        UserEntity user=userDao.findUserByEmail(email);
+    public boolean sendResetPassMail(String email) {
+        UserEntity user = userDao.findUserByEmail(email);
 
-        if(user!=null) {
+        if (user != null) {
             String token = generateNewToken();
             user.setAuxiliarToken(token);
             String username = user.getUsername();
@@ -135,122 +139,122 @@ public class UserBean implements Serializable {
             } catch (UnsupportedEncodingException e) {
                 return false;
             }
-        }
-        else return false;
+        } else return false;
     }
 
-    public boolean checkIfUserExists(User user){
-        if(user != null){
-            if(user.getUsername() !=null){
+    public boolean checkIfUserExists(User user) {
+        if (user != null) {
+            if (user.getUsername() != null) {
                 return userDao.findUserByUsername(user.getUsername()) != null;
             }
         }
         return false;
     }
-    public boolean checkIfemailExists(User user){
-        if(user != null){
-            if(user.getEmail() !=null){
+
+    public boolean checkIfemailExists(User user) {
+        if (user != null) {
+            if (user.getEmail() != null) {
                 return userDao.findUserByEmail(user.getEmail()) != null;
             }
         }
         return false;
     }
 
-    public boolean checkIfemailExists(String email){
-        UserEntity user=userDao.findUserByEmail(email);
-      if (user != null && user.isConfirmed()){
-          return true;
-      }
-      else return false;
+    public boolean checkIfemailExists(String email) {
+        UserEntity user = userDao.findUserByEmail(email);
+        if (user != null && user.isConfirmed()) {
+            return true;
+        } else return false;
     }
 
 
-    public boolean checkIfUserExists(String username){
+    public boolean checkIfUserExists(String username) {
         UserEntity user = getUserByUsername(username);
-        if(user != null){
-            if(userDao.findUserByUsername(user.getUsername()) != null ||
-                    userDao.findUserByEmail(user.getEmail()) != null){
+        if (user != null) {
+            if (userDao.findUserByUsername(user.getUsername()) != null ||
+                    userDao.findUserByEmail(user.getEmail()) != null) {
                 return true;
             }
         }
         return false;
     }
-    public String login(LoginDto user){
+
+    public String login(LoginDto user) {
         System.out.println(user.getUsername());
         UserEntity userEntity = userDao.findUserByUsername(user.getUsername());
-        if(userEntity !=null){
-            if(!userEntity.getDeleted()){
+        if (userEntity != null) {
+            if (!userEntity.getDeleted()) {
                 System.out.println(userEntity);
-                if(userEntity.isConfirmed()) {
+                if (userEntity.isConfirmed()) {
                     if (userEntity != null) {
                         if (userEntity.getPassword().equals(user.getPassword())) {
                             String token = generateNewToken();
                             userEntity.setToken(token);
-                            logger.info(user.getUsername()+": logged in app");
+                            logger.info(user.getUsername() + ": logged in app");
                             return token;
-                        }else     logger.error(user.getUsername()+": error logging in app");
+                        } else logger.error(user.getUsername() + ": error logging in app");
                     }
-                }else return userEntity.getToken();
+                } else return userEntity.getToken();
             }
         }
         return null;
     }
 
 
-    public String setNewToken(String token){
-        UserEntity user =userDao.findUserByAuxiliarToken(token);
-        if (user!=null){
-            String newToken=generateNewToken();
+    public String setNewToken(String token) {
+        UserEntity user = userDao.findUserByAuxiliarToken(token);
+        if (user != null) {
+            String newToken = generateNewToken();
             user.setAuxiliarToken(newToken);
             userDao.updateUser(user);
             return newToken;
-        }
-        else return null;
+        } else return null;
     }
 
-    public String getUsername(String token){
-        UserEntity user=getUserByToken(token);
-        if (user!=null){
+    public String getUsername(String token) {
+        UserEntity user = getUserByToken(token);
+        if (user != null) {
 
             return user.getUsername();
-        }
-        else return null;
+        } else return null;
     }
-    public boolean getConfirmed(LoginDto user){
-        UserEntity userEntity=userDao.findUserByUsername(user.getUsername());
+
+    public boolean getConfirmed(LoginDto user) {
+        UserEntity userEntity = userDao.findUserByUsername(user.getUsername());
         return userEntity.isConfirmed();
     }
 
 
-    public boolean tokenValidator(String token ){
-        if (userDao.findUserByToken(token) != null && token !=null)
+    public boolean tokenValidator(String token) {
+        if (userDao.findUserByToken(token) != null && token != null)
             return true;
         return false;
     }
 
-    public boolean auxiliarTokenValidator(String token ){
-        if (userDao.findUserByAuxiliarToken(token) != null && token !=null)
+    public boolean auxiliarTokenValidator(String token) {
+        if (userDao.findUserByAuxiliarToken(token) != null && token != null)
             return true;
         return false;
     }
 
-    public boolean isConfirmed(String token){
-        UserEntity userEntity=userDao.findUserByAuxiliarToken(token);
-        if(userEntity.isConfirmed()) return true;
+    public boolean isConfirmed(String token) {
+        UserEntity userEntity = userDao.findUserByAuxiliarToken(token);
+        if (userEntity.isConfirmed()) return true;
         else return false;
     }
 
-    public UserEntity getUserByToken(String token){
-        UserEntity user=userDao.findUserByToken(token);
-        if(user!=null) return user;
+    public UserEntity getUserByToken(String token) {
+        UserEntity user = userDao.findUserByToken(token);
+        if (user != null) return user;
         else return null;
 
     }
 
-    public UserEntity getUserByUsername(String username){
-       return userDao.findUserByUsername(username);
+    public UserEntity getUserByUsername(String username) {
+        return userDao.findUserByUsername(username);
     }
-    public boolean UserExistsByUsername(String username){
+
+    public boolean UserExistsByUsername(String username) {
         return userDao.findUserByUsername(username) != null;
     }
 
@@ -261,20 +265,23 @@ public class UserBean implements Serializable {
         secureRandom.nextBytes(randomBytes);
         return base64Encoder.encodeToString(randomBytes);
     }
-    public String getPhotoURLByUsername(String token){
-         UserEntity user = userDao.findUserByToken(token);
-         return user.getPhotoURL();
+
+    public String getPhotoURLByUsername(String token) {
+        UserEntity user = userDao.findUserByToken(token);
+        return user.getPhotoURL();
     }
 
-    public String getFirstNameByToken(String token){
+    public String getFirstNameByToken(String token) {
         UserEntity user = userDao.findUserByToken(token);
-      return user.getFirstName();
+        return user.getFirstName();
     }
-    public String getRoleByToken(String token){
+
+    public String getRoleByToken(String token) {
         UserEntity user = userDao.findUserByToken(token);
         return user.getRole();
     }
-    public User convertUserEntityToUser(UserEntity userEntity){
+
+    public User convertUserEntityToUser(UserEntity userEntity) {
         return new User(userEntity.getUsername(),
                 userEntity.getPassword(),
                 userEntity.getPhoneNumber(),
@@ -286,149 +293,152 @@ public class UserBean implements Serializable {
                 userEntity.getDeleted(),
                 userEntity.isConfirmed());
     }
-    public void createDefaultUsersIfNotExistent(){
+
+    public void createDefaultUsersIfNotExistent() {
         UserEntity productOwner = userDao.findUserByUsername("admin");
-        UserEntity scrumMaster =userDao.findUserByUsername("scrumMasterTest");
-        UserEntity developer =userDao.findUserByUsername("developerTest");
-        UserEntity deletedTasks =userDao.findUserByUsername("deletedTasks");
+        UserEntity scrumMaster = userDao.findUserByUsername("scrumMasterTest");
+        UserEntity developer = userDao.findUserByUsername("developerTest");
+        UserEntity deletedTasks = userDao.findUserByUsername("deletedTasks");
         String hashedAdminPassword = HashUtil.toSHA256("admin");
-        if(productOwner == null){
-            userDao.persist(new UserEntity("admin", hashedAdminPassword,"admin@admin.com",
+        if (productOwner == null) {
+            userDao.persist(new UserEntity("admin", hashedAdminPassword, "admin@admin.com",
                     "admin", "admin", "admin",
                     "https://icons.veryicon.com/png/o/miscellaneous/yuanql/icon-admin.png",
-                    "admin", userRoleManager.PRODUCT_OWNER,false,true));
+                    "admin", userRoleManager.PRODUCT_OWNER, false, true));
         }
-        if(scrumMaster == null){
-            userDao.persist(new UserEntity("scrumMasterTest", hashedAdminPassword,"srummaster@admin.com",
+        if (scrumMaster == null) {
+            userDao.persist(new UserEntity("scrumMasterTest", hashedAdminPassword, "srummaster@admin.com",
                     "scrumMasterTest", "test", "123123123",
                     "https://icons.veryicon.com/png/o/miscellaneous/yuanql/icon-admin.png",
-                    "scrum", userRoleManager.SCRUM_MASTER,false,true));
+                    "scrum", userRoleManager.SCRUM_MASTER, false, true));
         }
-        if(developer == null){
-            userDao.persist(new UserEntity("developerTest", hashedAdminPassword,"developer@admin.com",
+        if (developer == null) {
+            userDao.persist(new UserEntity("developerTest", hashedAdminPassword, "developer@admin.com",
                     "DeveloperTest", "test", "123123123",
                     "https://icons.veryicon.com/png/o/miscellaneous/yuanql/icon-admin.png",
-                    "devel", userRoleManager.DEVELOPER,false,true));
+                    "devel", userRoleManager.DEVELOPER, false, true));
         }
-        if(deletedTasks == null){
-            userDao.persist(new UserEntity("deletedTasks", hashedAdminPassword,"deleted@admin.com",
+        if (deletedTasks == null) {
+            userDao.persist(new UserEntity("deletedTasks", hashedAdminPassword, "deleted@admin.com",
                     "deleted", "tasks", "deleted",
                     "https://icons.veryicon.com/png/o/miscellaneous/yuanql/icon-admin.png",
-                    "deleted", userRoleManager.PRODUCT_OWNER,false,true));
+                    "deleted", userRoleManager.PRODUCT_OWNER, false, true));
         }
     }
 
-    public UserWithNoPassword convertUserEntityToUserWithNoPassword(UserEntity userEntity){
-      return new UserWithNoPassword(userEntity.getUsername(),
-              userEntity.getPhoneNumber(), // Corrigido: phoneNumber antes de email
-              userEntity.getEmail(),
-              userEntity.getFirstName(),
-              userEntity.getLastName(),
-              userEntity.getPhotoURL(),
-              userEntity.getRole(),
-              userEntity.getDeleted());
+    public UserWithNoPassword convertUserEntityToUserWithNoPassword(UserEntity userEntity) {
+        return new UserWithNoPassword(userEntity.getUsername(),
+                userEntity.getPhoneNumber(), // Corrigido: phoneNumber antes de email
+                userEntity.getEmail(),
+                userEntity.getFirstName(),
+                userEntity.getLastName(),
+                userEntity.getPhotoURL(),
+                userEntity.getRole(),
+                userEntity.getDeleted());
     }
+
     public boolean updateUser(String token, User updatedUser) {
         UserEntity user = getUserByToken(token);
         System.out.println(user);
         System.out.println(token);
-        if(user != null){
-            if(updatedUser.getPhoneNumber() != null) user.setPhoneNumber(updatedUser.getPhoneNumber());
-            if(updatedUser.getEmail() != null) user.setEmail(updatedUser.getEmail());
-            if(updatedUser.getFirstName() != null) user.setFirstName(updatedUser.getFirstName());
-            if(updatedUser.getLastName() != null) user.setLastName(updatedUser.getLastName());
-            if(updatedUser.getPhotoURL() != null) user.setPhotoURL(updatedUser.getPhotoURL());
+        if (user != null) {
+            if (updatedUser.getPhoneNumber() != null) user.setPhoneNumber(updatedUser.getPhoneNumber());
+            if (updatedUser.getEmail() != null) user.setEmail(updatedUser.getEmail());
+            if (updatedUser.getFirstName() != null) user.setFirstName(updatedUser.getFirstName());
+            if (updatedUser.getLastName() != null) user.setLastName(updatedUser.getLastName());
+            if (updatedUser.getPhotoURL() != null) user.setPhotoURL(updatedUser.getPhotoURL());
             user.setDeleted(updatedUser.isDeleted());
             return userDao.updateUser(user);
         }
-      return false;
+        return false;
     }
-    public boolean updateUserByUsername(String token, String userToChangeUsername, User updatedUser){
+
+    public boolean updateUserByUsername(String token, String userToChangeUsername, User updatedUser) {
         UserEntity userProductOwner = getUserByToken(token);
         UserEntity userToChange = getUserByUsername(userToChangeUsername);
-        if(userToChange != null){
-            if(userProductOwner.getRole().equals(userRoleManager.PRODUCT_OWNER) && updatedUser != null){
-                if(updatedUser.getPhoneNumber() != null)userToChange.setPhoneNumber(updatedUser.getPhoneNumber());
-                if(updatedUser.getEmail() != null) userToChange.setEmail(updatedUser.getEmail());
-                if(updatedUser.getFirstName() != null) userToChange.setFirstName(updatedUser.getFirstName());
-                if(updatedUser.getLastName() != null) userToChange.setLastName(updatedUser.getLastName());
-                if(updatedUser.getPhotoURL() != null) userToChange.setPhotoURL(updatedUser.getPhotoURL());
-                if(updatedUser.getRole() != null) userToChange.setRole(updatedUser.getRole());
+        if (userToChange != null) {
+            if (userProductOwner.getRole().equals(userRoleManager.PRODUCT_OWNER) && updatedUser != null) {
+                if (updatedUser.getPhoneNumber() != null) userToChange.setPhoneNumber(updatedUser.getPhoneNumber());
+                if (updatedUser.getEmail() != null) userToChange.setEmail(updatedUser.getEmail());
+                if (updatedUser.getFirstName() != null) userToChange.setFirstName(updatedUser.getFirstName());
+                if (updatedUser.getLastName() != null) userToChange.setLastName(updatedUser.getLastName());
+                if (updatedUser.getPhotoURL() != null) userToChange.setPhotoURL(updatedUser.getPhotoURL());
+                if (updatedUser.getRole() != null) userToChange.setRole(updatedUser.getRole());
                 userToChange.setDeleted(updatedUser.isDeleted());
-                if(updatedUser.isDeleted())userToChange.setToken(null);
+                if (updatedUser.isDeleted()) userToChange.setToken(null);
                 return userDao.updateUser(userToChange);
             }
         }
         return false;
     }
 
-    public boolean updateUserConfirmed(String token, boolean confirmed){
-        UserEntity userEntity=userDao.findUserByAuxiliarToken(token);
+    public boolean updateUserConfirmed(String token, boolean confirmed) {
+        UserEntity userEntity = userDao.findUserByAuxiliarToken(token);
         userEntity.setConfirmed(confirmed);
         userEntity.setAuxiliarToken(null);
         return userDao.updateUser(userEntity);
     }
 
-    public void clearToken(String token){
-        UserEntity user=userDao.findUserByAuxiliarToken(token);
+    public void clearToken(String token) {
+        UserEntity user = userDao.findUserByAuxiliarToken(token);
         user.setAuxiliarToken(null);
         userDao.updateUser(user);
     }
 
-    public String getAuxiliarToken(LoginDto user){
-        UserEntity userEntity=userDao.findUserByUsername(user.getUsername());
+    public String getAuxiliarToken(LoginDto user) {
+        UserEntity userEntity = userDao.findUserByUsername(user.getUsername());
         return userEntity.getAuxiliarToken();
     }
-    public boolean oldPasswordConfirmation(String token, String oldPassword, String newPassword){
+
+    public boolean oldPasswordConfirmation(String token, String oldPassword, String newPassword) {
         UserEntity user = getUserByToken(token);
-        if(user != null){
-            if(user.getPassword().equals(oldPassword) && !user.getPassword().equals(newPassword)){
+        if (user != null) {
+            if (user.getPassword().equals(oldPassword) && !user.getPassword().equals(newPassword)) {
                 return true;
             }
         }
         return false;
     }
 
-    public boolean updatePassWord(String token, String newPassword){
+    public boolean updatePassWord(String token, String newPassword) {
         UserEntity user = userDao.findUserByAuxiliarToken(token);
-        if(user != null){
+        if (user != null) {
             user.setPassword(newPassword);
             return userDao.updateUser(user);
         }
         return false;
     }
 
-    public boolean deleteUserTemporarily(String username){
+    public boolean deleteUserTemporarily(String username) {
         UserEntity userEntity = userDao.findUserByUsername(username);
-        if(!userEntity.getDeleted()) {
+        if (!userEntity.getDeleted()) {
             userEntity.setDeleted(true);
             userDao.merge(userEntity);
             return true;
-        }
-        else return false;
+        } else return false;
     }
 
-    public void transferTasks(String username){
-        UserEntity userEntity=getUserByUsername(username);
-        UserEntity admin=getUserByUsername("deletedTasks");
-        ArrayList<TaskEntity> tasks=taskDao.getTasksByUser(userEntity);
-        for(TaskEntity task:tasks){
+    public void transferTasks(String username) {
+        UserEntity userEntity = getUserByUsername(username);
+        UserEntity admin = getUserByUsername("deletedTasks");
+        ArrayList<TaskEntity> tasks = taskDao.getTasksByUser(userEntity);
+        for (TaskEntity task : tasks) {
             task.setUser(admin);
             taskDao.merge(task);
         }
     }
 
-    public void transferCategories(String username){
-        UserEntity userEntity=getUserByUsername(username);
-        UserEntity admin=getUserByUsername("deletedTasks");
-        ArrayList<CategoryEntity> categoryEntities=categoryDao.getCategoriesByUser(userEntity);
-        for(CategoryEntity category:categoryEntities){
+    public void transferCategories(String username) {
+        UserEntity userEntity = getUserByUsername(username);
+        UserEntity admin = getUserByUsername("deletedTasks");
+        ArrayList<CategoryEntity> categoryEntities = categoryDao.getCategoriesByUser(userEntity);
+        for (CategoryEntity category : categoryEntities) {
             category.setAuthor(admin);
             categoryDao.merge(category);
         }
     }
 
-    public UserInfoCard convertUserEntityToUserInfoCard(UserEntity userEntity){
+    public UserInfoCard convertUserEntityToUserInfoCard(UserEntity userEntity) {
         return new UserInfoCard(userEntity.getUsername(),
                 userEntity.getFirstName(),
                 userEntity.getPhotoURL(),
@@ -436,24 +446,27 @@ public class UserBean implements Serializable {
                 userEntity.getRole(),
                 userEntity.isConfirmed());
     }
-    public List<UserInfoCard> getAllUsersInfo(){
+
+    public List<UserInfoCard> getAllUsersInfo() {
         List<UserEntity> userEntities = userDao.findAllUsers();
         List<UserInfoCard> users = new ArrayList<>();
-        if(userEntities != null){
-            for(UserEntity userEntity : userEntities){
+        if (userEntities != null) {
+            for (UserEntity userEntity : userEntities) {
                 users.add(convertUserEntityToUserInfoCard(userEntity));
             }
         }
         return users;
     }
-    public boolean deleteUserPermanetely(String username){
+
+    public boolean deleteUserPermanetely(String username) {
 
         return userDao.deleteUser(username);
     }
-    public void logout(String token){
+
+    public void logout(String token) {
         UserEntity user = getUserByToken(token);
         System.out.println(user);
-        if(user != null){
+        if (user != null) {
             user.setToken(null);
             userDao.updateUser(user);
         }
@@ -465,23 +478,23 @@ public class UserBean implements Serializable {
     }
 
     ///DASHBOARD///
-    public int countConfirmedUsers(){
-        try{
+    public int countConfirmedUsers() {
+        try {
             return userDao.countConfirmedUsers();
-        }catch (ArithmeticException e){
+        } catch (ArithmeticException e) {
             return 0;
         }
     }
 
-    public int countNotConfirmedUsers(){
-        try{
+    public int countNotConfirmedUsers() {
+        try {
             return userDao.countNotConfirmedUsers();
-        }catch (ArithmeticException e){
+        } catch (ArithmeticException e) {
             return 0;
         }
     }
 
-    public ArrayList<Integer> calculateUsersByHour (){
+    public ArrayList<Integer> calculateUsersByHour() {
         List<LocalDateTime> dateOfUsersRegister = userDao.getUsersRegisterDates();
 
         LocalDateTime appCreationDate = userDao.getRegisterDate("admin"); // Replace this with the actual app creation date
@@ -491,7 +504,7 @@ public class UserBean implements Serializable {
         long totalHours = appCreationDate.until(presentDate, java.time.temporal.ChronoUnit.HOURS);
 
         // Initialize an ArrayList to store the number of users registered in each hour
-        ArrayList<Integer> usersByHour = new ArrayList<>(Collections.nCopies((int) totalHours+1, 0));
+        ArrayList<Integer> usersByHour = new ArrayList<>(Collections.nCopies((int) totalHours + 1, 0));
 
         // Iterate over each registration date and increment the corresponding hour in the ArrayList
         for (LocalDateTime registrationDate : dateOfUsersRegister) {
@@ -506,16 +519,16 @@ public class UserBean implements Serializable {
             }
         }
         int cumulativeCount = 0;
-        for (int i = 0; i <  usersByHour.size(); i++) {
-            cumulativeCount +=   usersByHour.get(i);
+        for (int i = 0; i < usersByHour.size(); i++) {
+            cumulativeCount += usersByHour.get(i);
             usersByHour.set(i, cumulativeCount);
         }
 
         return usersByHour;
     }
 
-    public LocalDateTime getAppCreationDate(){
-       return userDao.getRegisterDate("admin");
+    public LocalDateTime getAppCreationDate() {
+        return userDao.getRegisterDate("admin");
     }
 
 

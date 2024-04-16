@@ -1,5 +1,6 @@
 
 package aor.paj.service;
+import aor.paj.bean.AppConfigurationsBean;
 import aor.paj.bean.PermissionBean;
 import aor.paj.bean.TaskBean;
 import aor.paj.bean.UserBean;
@@ -9,26 +10,29 @@ import aor.paj.entity.UserEntity;
 import aor.paj.service.status.Function;
 import aor.paj.service.status.userRoleManager;
 import aor.paj.service.validator.TaskValidator;
+import jakarta.ejb.EJB;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hibernate.annotations.CollectionIdJavaType;
 
 import java.util.ArrayList;
 
 
 @Path("/tasks")
 public class TaskService {
-    @Inject
+    @EJB
     TaskBean taskBean;
-
     @Inject
     TaskValidator taskValidator;
-    @Inject
+    @EJB
     UserBean userBean;
-    @Inject
+    @EJB
     PermissionBean permissionBean;
+    @EJB
+    AppConfigurationsBean appConfigurationsBean;
 
 
     /**
@@ -39,11 +43,16 @@ public class TaskService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response createTask(@HeaderParam("token") String token,@PathParam("type")String categoryType, TaskDto a) {
         if (userBean.tokenValidator(token)) {
-            if (taskValidator.validateTask(a)) {
-                if(taskBean.addTask(token,categoryType,a)){
-                    return Response.status(201).entity("A new task has been created").build();
-                }return Response.status(400).entity("Invalid task type").build();
-            }return Response.status(400).entity("Invalid task data").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (taskValidator.validateTask(a)) {
+                    if (taskBean.addTask(token, categoryType, a)) {
+                        return Response.status(201).entity("A new task has been created").build();
+                    }
+                    return Response.status(400).entity("Invalid task type").build();
+                }
+                return Response.status(400).entity("Invalid task data").build();
+            }else return Response.status(401).entity("Session has expired").build();
+
         }return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -56,15 +65,16 @@ public class TaskService {
     public Response editTask( @PathParam("id")int id, @HeaderParam("token") String token, TaskDto taskDto) {
 
         if (userBean.tokenValidator(token)) {
-            System.out.println("ENTROU NO EDITIGN TAKS");
-            if (taskBean.taskIdValidator(id)) {
-                if(permissionBean.getPermissionByTaskID(token, id)) {
-                    taskDto.setStatus(100);
-                    if (taskBean.editTask(id, taskDto)) {
-                        return Response.status(200).entity("Task updated successfuly.").build();
-                    } else return Response.status(400).entity("Wrong data.").build();
-                } else return Response.status(403).entity("Access Denied").build();
-            } else return Response.status(404).entity("Task with this id not found").build();
+           if(appConfigurationsBean.validateTimeout(token)) {
+               if (taskBean.taskIdValidator(id)) {
+                   if (permissionBean.getPermissionByTaskID(token, id)) {
+                       taskDto.setStatus(100);
+                       if (taskBean.editTask(id, taskDto)) {
+                           return Response.status(200).entity("Task updated successfuly.").build();
+                       } else return Response.status(400).entity("Wrong data.").build();
+                   } else return Response.status(403).entity("Access Denied").build();
+               } else return Response.status(404).entity("Task with this id not found").build();
+           }else return Response.status(401).entity("Session has expired").build();
         } else return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -76,14 +86,18 @@ public class TaskService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllTasks(@HeaderParam("token") String token) {
         if(userBean.tokenValidator(token)){
-            if(permissionBean.getPermission(token,Function.GET_ALL_TASKS)){
-                ArrayList<TaskEntity> tasksEntities=taskBean.getAllTasks();
-                ArrayList<TaskDto> tasksDtos=new ArrayList<>();
-                for(TaskEntity task:tasksEntities){
-                    TaskDto taskDto=taskBean.convertTaskEntitytoTaskDto(task);
-                    tasksDtos.add(taskDto);
-                }return Response.status(200).entity(tasksDtos).build();
-            } return Response.status(403).entity("User permissions violated").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.GET_ALL_TASKS)) {
+                    ArrayList<TaskEntity> tasksEntities = taskBean.getAllTasks();
+                    ArrayList<TaskDto> tasksDtos = new ArrayList<>();
+                    for (TaskEntity task : tasksEntities) {
+                        TaskDto taskDto = taskBean.convertTaskEntitytoTaskDto(task);
+                        tasksDtos.add(taskDto);
+                    }
+                    return Response.status(200).entity(tasksDtos).build();
+                }
+                return Response.status(403).entity("User permissions violated").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }return Response.status(403).entity("User not logged").build();
     }
 
@@ -95,9 +109,11 @@ public class TaskService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getTaskById(@PathParam("id") int id, @HeaderParam("token") String token) {
         if(userBean.tokenValidator(token)){
-            if(taskBean.taskIdValidator(id)){
-                return Response.status(200).entity(taskBean.convertTaskEntitytoTaskDto(taskBean.getTaskById(id))).build();
-            }else return Response.status(404).entity("Task with this id not found").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (taskBean.taskIdValidator(id)) {
+                    return Response.status(200).entity(taskBean.convertTaskEntitytoTaskDto(taskBean.getTaskById(id))).build();
+                } else return Response.status(404).entity("Task with this id not found").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }else return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -109,12 +125,14 @@ public class TaskService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllTasksNotDeleted(@HeaderParam("token") String token) {
         if(userBean.tokenValidator(token)){
-            ArrayList<TaskEntity> tasksEntities=taskBean.getAllTasksByDeleted(false);
-            ArrayList<TaskDto> tasksDtos=new ArrayList<>();
-            for(TaskEntity task:tasksEntities){
-                tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
-            }
-            return Response.status(200).entity(tasksDtos).build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                ArrayList<TaskEntity> tasksEntities = taskBean.getAllTasksByDeleted(false);
+                ArrayList<TaskDto> tasksDtos = new ArrayList<>();
+                for (TaskEntity task : tasksEntities) {
+                    tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
+                }
+                return Response.status(200).entity(tasksDtos).build();
+            }else return Response.status(401).entity("Session has expired").build();
         }
         else return Response.status(403).entity("User permissions violated").build();
     }
@@ -127,14 +145,17 @@ public class TaskService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllTasksDeleted(@HeaderParam("token") String token) {
         if(userBean.tokenValidator(token)){
-            if(permissionBean.getPermission(token,Function.GET_ALL_TASKS_DELETED)){
-                ArrayList<TaskEntity> tasksEntities=taskBean.getAllTasksByDeleted(true);
-                ArrayList<TaskDto> tasksDtos=new ArrayList<>();
-                for(TaskEntity task:tasksEntities){
-                    tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.GET_ALL_TASKS_DELETED)) {
+                    ArrayList<TaskEntity> tasksEntities = taskBean.getAllTasksByDeleted(true);
+                    ArrayList<TaskDto> tasksDtos = new ArrayList<>();
+                    for (TaskEntity task : tasksEntities) {
+                        tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
+                    }
+                    return Response.status(200).entity(tasksDtos).build();
                 }
-                return Response.status(200).entity(tasksDtos).build();
-            }return Response.status(403).entity("User permissions violated").build();
+                return Response.status(403).entity("User permissions violated").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -147,15 +168,19 @@ public class TaskService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getTasksNumberByUser(@HeaderParam("token") String token,@PathParam("username") String username) {
         if(userBean.tokenValidator(token)){
-            if (permissionBean.getPermission(token,Function.GET_ALL_TASKS_BY_USER)){
-                ArrayList<TaskEntity> tasksEntities=taskBean.getAllTasksByUsername(username);
-                ArrayList<TaskDto> tasksDtos=new ArrayList<>();
-                for(TaskEntity task:tasksEntities){
-                    if(!task.isDeleted()) {
-                        tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.GET_ALL_TASKS_BY_USER)) {
+                    ArrayList<TaskEntity> tasksEntities = taskBean.getAllTasksByUsername(username);
+                    ArrayList<TaskDto> tasksDtos = new ArrayList<>();
+                    for (TaskEntity task : tasksEntities) {
+                        if (!task.isDeleted()) {
+                            tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
+                        }
                     }
-                }return Response.status(200).entity(tasksDtos.size()).build();
-            }return Response.status(200).entity("User permissions violated").build();
+                    return Response.status(200).entity(tasksDtos.size()).build();
+                }
+                return Response.status(200).entity("User permissions violated").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -167,15 +192,19 @@ public class TaskService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllTasksByUser(@HeaderParam("token") String token,@QueryParam("username") String username) {
         if(userBean.tokenValidator(token)){
-            if (permissionBean.getPermission(token,Function.GET_ALL_TASKS_BY_USER)){
-                ArrayList<TaskEntity> tasksEntities=taskBean.getAllTasksByUsername(username);
-                ArrayList<TaskDto> tasksDtos=new ArrayList<>();
-                for(TaskEntity task:tasksEntities){
-                    if(!task.isDeleted()) {
-                        tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.GET_ALL_TASKS_BY_USER)) {
+                    ArrayList<TaskEntity> tasksEntities = taskBean.getAllTasksByUsername(username);
+                    ArrayList<TaskDto> tasksDtos = new ArrayList<>();
+                    for (TaskEntity task : tasksEntities) {
+                        if (!task.isDeleted()) {
+                            tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
+                        }
                     }
-                }return Response.status(200).entity(tasksDtos).build();
-            }return Response.status(200).entity("User permissions violated").build();
+                    return Response.status(200).entity(tasksDtos).build();
+                }
+                return Response.status(200).entity("User permissions violated").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -188,15 +217,19 @@ public class TaskService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllTasksByCategory(@HeaderParam("token")String token, @QueryParam("category")String category_type){
         if(userBean.tokenValidator(token)){
-            if(permissionBean.getPermission(token, Function.GET_ALL_TASKS_BY_CATEGORY)){
-                ArrayList<TaskEntity> tasksEntities=taskBean.getAllTasksByCategory(category_type);
-                ArrayList<TaskDto> tasksDtos=new ArrayList<>();
-                for(TaskEntity task:tasksEntities){
-                    if(!task.isDeleted()) {
-                        tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.GET_ALL_TASKS_BY_CATEGORY)) {
+                    ArrayList<TaskEntity> tasksEntities = taskBean.getAllTasksByCategory(category_type);
+                    ArrayList<TaskDto> tasksDtos = new ArrayList<>();
+                    for (TaskEntity task : tasksEntities) {
+                        if (!task.isDeleted()) {
+                            tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
+                        }
                     }
-                }return Response.status(200).entity(tasksDtos).build();
-            }return Response.status(403).entity("User permissions violated").build();
+                    return Response.status(200).entity(tasksDtos).build();
+                }
+                return Response.status(403).entity("User permissions violated").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -208,11 +241,13 @@ public class TaskService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getTasksByUserAndCategory(@HeaderParam("token")String token,@QueryParam("username")String username,@QueryParam("category")String category){
         if(userBean.tokenValidator(token)){
-            if(permissionBean.getPermission(token, Function.GET_ALL_TASKS_BY_CATEGORY_AND_USER)) {
-                if (userBean.getUserByUsername(username) != null) {
-                    return Response.status(200).entity(taskBean.getTaskByUsernameAndCategory(category, username)).build();
-                }return Response.status(400).entity("Doesn't exist any User with that Username").build();
-            }return Response.status(403).entity("User permissions violated").build();
+            if(appConfigurationsBean.validateTimeout(token)){
+                if(permissionBean.getPermission(token, Function.GET_ALL_TASKS_BY_CATEGORY_AND_USER)) {
+                    if (userBean.getUserByUsername(username) != null) {
+                        return Response.status(200).entity(taskBean.getTaskByUsernameAndCategory(category, username)).build();
+                    }return Response.status(400).entity("Doesn't exist any User with that Username").build();
+                }return Response.status(403).entity("User permissions violated").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -224,13 +259,15 @@ public class TaskService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response changeTaskStatus(@PathParam("id")int id,@HeaderParam("token")String token, @PathParam("status")int status){
         if(userBean.tokenValidator(token)){
-            if(taskBean.taskIdValidator(id)){
-                if(taskBean.validateStatus(status)) {
-                    if (taskBean.changeStatus(status, id))
-                        return Response.status(200).entity("Task status updated").build();
-                    else return Response.status(200).entity("Task is already with this status value").build();
-                }else return Response.status(400).entity("Status value is invalid").build();
-            } else return Response.status(404).entity("Task with this id not found").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (taskBean.taskIdValidator(id)) {
+                    if (taskBean.validateStatus(status)) {
+                        if (taskBean.changeStatus(status, id))
+                            return Response.status(200).entity("Task status updated").build();
+                        else return Response.status(200).entity("Task is already with this status value").build();
+                    } else return Response.status(400).entity("Status value is invalid").build();
+                } else return Response.status(404).entity("Task with this id not found").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }else return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -242,13 +279,15 @@ public class TaskService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response deleteTaskTemporarily(@PathParam("id")int id, @HeaderParam("token")String token){
         if(userBean.tokenValidator(token)){
-                if(taskBean.taskIdValidator(id)) {
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (taskBean.taskIdValidator(id)) {
                     if (permissionBean.getPermissionByTaskID(token, id)) {
                         if (taskBean.deleteTemporarily(id))
                             return Response.status(200).entity("This task was successfully deleted").build();
                         else return Response.status(400).entity("This task is already deleted").build();
-                    }else return Response.status(403).entity("User permissions violated").build();
-                }else return Response.status(404).entity("Task with this id not found").build();
+                    } else return Response.status(403).entity("User permissions violated").build();
+                } else return Response.status(404).entity("Task with this id not found").build();
+            }else return Response.status(401).entity("Session has expired").build();
         } else return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -260,12 +299,15 @@ public class TaskService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response recycleTask(@PathParam("id")int id, @HeaderParam("token")String token){
         if(userBean.tokenValidator(token)){
-            if(permissionBean.getPermission(token, Function.RECYCLY_TASK_BY_ID)){
-                if(taskBean.taskIdValidator(id)){
-                    if(taskBean.recycleTask(id)) return Response.status(200).entity("This task was successfully recycled").build();
-                    else return Response.status(400).entity("This task isn't deleted").build();
-                }else return Response.status(404).entity("Task with this id not found").build();
-            } else return Response.status(403).entity("User permissions violated").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.RECYCLY_TASK_BY_ID)) {
+                    if (taskBean.taskIdValidator(id)) {
+                        if (taskBean.recycleTask(id))
+                            return Response.status(200).entity("This task was successfully recycled").build();
+                        else return Response.status(400).entity("This task isn't deleted").build();
+                    } else return Response.status(404).entity("Task with this id not found").build();
+                } else return Response.status(403).entity("User permissions violated").build();
+            }else return Response.status(401).entity("Session has expired").build();
         } else return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -277,12 +319,14 @@ public class TaskService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response deleteAllTasksTemporarily(@PathParam("username")String username,@HeaderParam("token")String token){
         if(userBean.tokenValidator(token)){
-            if(permissionBean.getPermission(token, Function.DELETE_ALL_TASKS_BY_USER_TEMPORARILY)){
-                if(userBean.getUserByUsername(username)!=null){
-                    taskBean.deleteAllTasksByUser(userBean.getUserByUsername(username));
-                    return Response.status(200).entity("Tasks sucecessfully deleted").build();
-                } else return Response.status(404).entity("User with this username not found").build();
-            }else return Response.status(403).entity("User permissions violated").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.DELETE_ALL_TASKS_BY_USER_TEMPORARILY)) {
+                    if (userBean.getUserByUsername(username) != null) {
+                        taskBean.deleteAllTasksByUser(userBean.getUserByUsername(username));
+                        return Response.status(200).entity("Tasks sucecessfully deleted").build();
+                    } else return Response.status(404).entity("User with this username not found").build();
+                } else return Response.status(403).entity("User permissions violated").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }else return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -295,16 +339,16 @@ public class TaskService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response deleteTaskPermanently(@PathParam("id")int id, @HeaderParam("token")String token){
         if(userBean.tokenValidator(token)){
-
-            if(permissionBean.getPermission(token, Function.DELETE_TASK_PERMANENTLY)){
-                if(taskBean.taskIdValidator(id)) {
-                    boolean deleted = taskBean.deleteTaskPermanently(id);
-                    if (deleted) return Response.status(200).entity("This task permanently deleted ").build();
-                    else return Response.status(400).entity("This task is already deleted").build();
-                } else return Response.status(400).entity("Task with this id not found").build();
-            } else return Response.status(403).entity("User permissions violated").build();
-        }
-        else return Response.status(403).entity("User permissions violated").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (permissionBean.getPermission(token, Function.DELETE_TASK_PERMANENTLY)) {
+                    if (taskBean.taskIdValidator(id)) {
+                        boolean deleted = taskBean.deleteTaskPermanently(id);
+                        if (deleted) return Response.status(200).entity("This task permanently deleted ").build();
+                        else return Response.status(400).entity("This task is already deleted").build();
+                    } else return Response.status(400).entity("Task with this id not found").build();
+                } else return Response.status(403).entity("User permissions violated").build();
+            }else return Response.status(401).entity("Session has expired").build();
+        } else return Response.status(403).entity("User permissions violated").build();
     }
 
     /**
@@ -315,13 +359,16 @@ public class TaskService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response userPermissionToEdit(@PathParam("id")int id, @HeaderParam("token")String token, @PathParam("permissionType")String permissionType){
         if(userBean.tokenValidator(token)){
-            if(taskBean.taskIdValidator(id)){
-                if(permissionBean.getPermissionByTaskID(token,id) && permissionType.equals("edit")){
-                    return Response.status(200).entity(true).build();
-                }
-                if(taskBean.taskDeletePermission(token) && permissionType.equals("delete"))  return Response.status(200).entity(true).build();
-                else return Response.status(403).entity("Don't have permission to edit this task").build();
-            }else return Response.status(400).entity("Task with this id not found").build();
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (taskBean.taskIdValidator(id)) {
+                    if (permissionBean.getPermissionByTaskID(token, id) && permissionType.equals("edit")) {
+                        return Response.status(200).entity(true).build();
+                    }
+                    if (taskBean.taskDeletePermission(token) && permissionType.equals("delete"))
+                        return Response.status(200).entity(true).build();
+                    else return Response.status(403).entity("Don't have permission to edit this task").build();
+                } else return Response.status(400).entity("Task with this id not found").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }else return Response.status(403).entity("User permissions violated").build();
     }
 
@@ -331,23 +378,21 @@ public class TaskService {
     public Response tasksNumberByUsernameAndStatus(@PathParam("username") String username, @PathParam("status") String status, @HeaderParam("token")String token){
 
         if(userBean.tokenValidator(token)){
-            if(status.equals("100") || status.equals("200") || status.equals("300") || status.equals("todo")||status.equals("doing" )|| status.equals("done")) {
-                status = (status.equals("todo")) ? "100" : (status.equals("doing")) ? "200" : (status.equals("done")) ? "300" : status;
-                    ArrayList<TaskDto> tasks = taskBean.getTasksByUsernameAndStatus(username, status,false);
+            if(appConfigurationsBean.validateTimeout(token)) {
+                if (status.equals("100") || status.equals("200") || status.equals("300") || status.equals("todo") || status.equals("doing") || status.equals("done")) {
+                    status = (status.equals("todo")) ? "100" : (status.equals("doing")) ? "200" : (status.equals("done")) ? "300" : status;
+                    ArrayList<TaskDto> tasks = taskBean.getTasksByUsernameAndStatus(username, status, false);
                     if (tasks != null) {
                         return Response.status(200).entity(tasks.size()).build();
                     } else return Response.status(404).entity("There is no user with that username").build();
-            }
-            else if(status.equals("total")){
-                ArrayList<TaskDto> tasks=taskBean.getTasksByUsernameAndDeleted(username, false);
-                return Response.status(200).entity(tasks.size()).build();
-            }
-            else if(status.equals("deleted")){
-                ArrayList<TaskDto> tasks=taskBean.getTasksByUsernameAndDeleted(username, true);
-                return Response.status(200).entity(tasks.size()).build();
-            }
-
-            else return Response.status(400).entity("Invalid task status").build();
+                } else if (status.equals("total")) {
+                    ArrayList<TaskDto> tasks = taskBean.getTasksByUsernameAndDeleted(username, false);
+                    return Response.status(200).entity(tasks.size()).build();
+                } else if (status.equals("deleted")) {
+                    ArrayList<TaskDto> tasks = taskBean.getTasksByUsernameAndDeleted(username, true);
+                    return Response.status(200).entity(tasks.size()).build();
+                } else return Response.status(400).entity("Invalid task status").build();
+            }else return Response.status(401).entity("Session has expired").build();
         }else return Response.status(403).entity("User permissions violated").build();
 
     }

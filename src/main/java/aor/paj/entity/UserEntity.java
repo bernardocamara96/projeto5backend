@@ -18,6 +18,9 @@ import java.util.Set;
 @NamedQuery(name = "User.countNotConfirmedUsers", query = "SELECT COUNT(u) FROM UserEntity u WHERE u.confirmed=false")
 @NamedQuery(name = "User.findAllRegisterDates", query = "SELECT u.registerDate FROM UserEntity u WHERE u.username NOT IN :excludedUsernames")
 @NamedQuery(name = "User.findRegisterDateByUsername", query = "SELECT u.registerDate FROM UserEntity u WHERE u.username=:username")
+@NamedQuery(name = "User.findLastActivityDateByToken", query = "SELECT u.lastActivityDate  FROM UserEntity u WHERE u.token=:token")
+@NamedQuery(name = "User.updateLastActivityDateByToken", query = "UPDATE UserEntity u SET u.lastActivityDate = :lastActivityDate WHERE u.token = :token")
+
 
 public class UserEntity implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -49,6 +52,8 @@ public class UserEntity implements Serializable {
     private boolean deleted;
     @Column(name="register_date", nullable = false,unique = false,updatable = false)
     private LocalDateTime registerDate;
+    @Column(name="lastActivity_date", nullable = true,unique = false,updatable = true)
+    private LocalDateTime lastActivityDate;
 
     @OneToMany(mappedBy = "user")
     private Set<TaskEntity> tasks;
@@ -195,6 +200,14 @@ public class UserEntity implements Serializable {
 
     public void setCategories(Set<CategoryEntity> categories) {
         this.categories = categories;
+    }
+
+    public LocalDateTime getLastActivityDate() {
+        return lastActivityDate;
+    }
+
+    public void setLastActivityDate(LocalDateTime lastActivityDate) {
+        this.lastActivityDate = lastActivityDate;
     }
 
     @Override
