@@ -1,10 +1,15 @@
 package aor.paj.dto;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import jakarta.xml.bind.annotation.XmlElement;
+import util.LocalDateTimeAdapter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class StatisticsDto {
     @XmlElement
@@ -15,8 +20,7 @@ public class StatisticsDto {
     private double averageTasksNumberByUser;
     @XmlElement
     private int[] tasksNumberByState;
-    @XmlElement
-    private ArrayList<CategoryStatsDto> categoriesList;
+
     @XmlElement
     private double averageConclusionTime;
     @XmlElement
@@ -25,6 +29,8 @@ public class StatisticsDto {
     private ArrayList<Integer> cumulativeTasksNumberByHour;
     @XmlElement
     private LocalDateTime[] appHoursArray;
+
+
 
     public StatisticsDto() {
 
@@ -62,13 +68,7 @@ public class StatisticsDto {
         this.tasksNumberByState = tasksNumberByState;
     }
 
-    public ArrayList<CategoryStatsDto> getCategoriesList() {
-        return categoriesList;
-    }
 
-    public void setCategoriesList(ArrayList<CategoryStatsDto> categoriesList) {
-        this.categoriesList = categoriesList;
-    }
 
     public double getAverageConclusionTime() {
         return averageConclusionTime;
@@ -102,4 +102,30 @@ public class StatisticsDto {
     public void setAppHoursArray(LocalDateTime[] appHoursArray) {
         this.appHoursArray = appHoursArray;
     }
+
+    @Override
+    public String toString() {
+
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
+                .create();
+
+        String[] appHoursStrings = new String[appHoursArray.length];
+
+        for (int i = 0; i < appHoursArray.length; i++) {
+            appHoursStrings[i] = gson.toJson(appHoursArray[i]);
+        }
+        return "{" +
+                "\"confirmedUsers\": " + confirmedUsers + "," +
+                "\"notConfirmedUsers\": " + notConfirmedUsers + "," +
+                "\"averageTasksNumberByUser\": " + averageTasksNumberByUser + "," +
+                "\"tasksNumberByState\": " + Arrays.toString(tasksNumberByState) + "," +
+                "\"averageConclusionTime\": " + averageConclusionTime + "," +
+                "\"numberOfUsersRegisterByHour\": " + numberOfUsersRegisterByHour + "," +
+                "\"cumulativeTasksNumberByHour\": " + cumulativeTasksNumberByHour + "," +
+                "\"appHoursArray\": " + Arrays.toString(appHoursStrings) +
+                "}";
+    }
+
+
 }

@@ -23,7 +23,7 @@ public class CategoryBean implements Serializable {
     CategoryDao categoryDao;
     @EJB
     UserBean userBean;
-    @Inject
+    @EJB
     TaskBean taskBean;
 
     public CategoryDto convertCategoryEntitytoCategoryDto(CategoryEntity categoryEntity){

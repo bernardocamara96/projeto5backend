@@ -101,6 +101,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <artifactId>jackson-databind</artifactId>
             <version>2.13.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version> <!-- Update version if necessary -->
+        </dependency>
 
     </dependencies>
     <build>

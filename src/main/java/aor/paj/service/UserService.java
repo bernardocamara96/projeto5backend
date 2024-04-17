@@ -7,13 +7,14 @@ import aor.paj.dto.*;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.status.Function;
 import aor.paj.service.validator.UserValidator;
+import aor.paj.websocket.DashboardWebSocket;
 import jakarta.ejb.EJB;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-
+import java.io.IOException;
 
 
 @Path("/users")
@@ -27,6 +28,8 @@ public class UserService {
     PermissionBean permissionBean;
     @EJB
     AppConfigurationsBean appConfigurationsBean;
+    @Inject
+    DashboardWebSocket dashboardWebSocket;
 
     /**
      * This endpoint is responsible for adding a new user to the system. It accepts JSON-formatted requests
@@ -53,6 +56,9 @@ public class UserService {
         }
         String token = userBean.register(user);
         if (token!=null) {
+            try {
+                dashboardWebSocket.send();
+            } catch (IOException e) {}
             return Response.status(200).entity("{\n" +
                     "  \"token\": \""+token+"\"\n" +
                     "}").build();
@@ -237,7 +243,9 @@ public class UserService {
             boolean updatePass = userBean.updatePassWord(token, pass);
             boolean updateResult = userBean.updateUserConfirmed(token,confirmed);
             if (updateResult && updatePass){
-
+                try {
+                    dashboardWebSocket.send();
+                } catch (IOException e) {}
                 return Response.status(200).entity("User data updated successfully").build();
             }
             else return Response.status(500).entity("An error occurred while updating user data").build();
@@ -381,6 +389,9 @@ public class UserService {
                             boolean successfullyDeleted = userBean.deleteUserPermanetely(username);
                             if (successfullyDeleted){
                                 appConfigurationsBean.setLastActivityDate(token);
+                                try {
+                                    dashboardWebSocket.send();
+                                } catch (IOException e) {}
                                 return Response.status(200).entity("This user permanently deleted ").build();}
                             else return Response.status(400).entity("User not deleted").build();
                         } else return Response.status(400).entity("Admin can't be deleted.").build();

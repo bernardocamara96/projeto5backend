@@ -120,6 +120,14 @@ public class UserDao extends AbstractDao<UserEntity> {
 		}
 	}
 
+	public ArrayList<String> getAllTokens(){
+		try{
+			return (ArrayList<String>) em.createNamedQuery("User.findAllTokens").getResultList();
+		}catch (NoResultException e){
+			return null;
+		}
+	}
+
 	public LocalDateTime getRegisterDate(String username) {
 		try {
 			return (LocalDateTime) em.createNamedQuery("User.findRegisterDateByUsername").setParameter("username", username)
@@ -142,21 +150,21 @@ public class UserDao extends AbstractDao<UserEntity> {
 
 	public boolean setLastActivityDate(LocalDateTime lastActivityDate, String token){
 		try{
-		Query query = em.createNamedQuery("User.updateLastActivityDateByToken");
-		query.setParameter("lastActivityDate", lastActivityDate);
-		query.setParameter("token", token);
+			Query query = em.createNamedQuery("User.updateLastActivityDateByToken");
+			query.setParameter("lastActivityDate", lastActivityDate);
+			query.setParameter("token", token);
 
-		int updatedRows = query.executeUpdate();
+			int updatedRows = query.executeUpdate();
 
-		if (updatedRows == 1) {
-			return true;
-		} else {
+			if (updatedRows == 1) {
+				return true;
+			} else {
+				return false;
+			}
+		} catch (Exception e) {
+			e.printStackTrace(); // Handle the exception appropriately
 			return false;
 		}
-	} catch (Exception e) {
-		e.printStackTrace(); // Handle the exception appropriately
-		return false;
-	}
 	}
 
 }

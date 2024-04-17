@@ -47,4 +47,14 @@ public class CategoryStatsDto {
     public void setTasksNumber(int tasksNumber) {
         this.tasksNumber = tasksNumber;
     }
+
+    @Override
+    public String toString() {
+        return "{" +
+                "\"id\": " + id +
+                ", \"type\": \"" + type + '\"' +
+                ", \"owner_username\": \"" + owner_username + '\"' +
+                ", \"tasksNumber\": " + tasksNumber +
+                '}';
+    }
 }

@@ -472,6 +472,9 @@ public class UserBean implements Serializable {
         }
     }
 
+    public ArrayList<String> getAllTokens(){
+        return userDao.getAllTokens();
+    }
     @Override
     public int hashCode() {
         return super.hashCode();

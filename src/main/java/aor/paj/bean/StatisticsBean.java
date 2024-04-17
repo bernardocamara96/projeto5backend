@@ -3,6 +3,7 @@ package aor.paj.bean;
 import aor.paj.dao.UserDao;
 import aor.paj.dto.StatisticsDto;
 import aor.paj.service.status.taskStatusManager;
+import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 
@@ -11,13 +12,11 @@ import java.util.ArrayList;
 
 @Stateless
 public class StatisticsBean {
-    @Inject
+    @EJB
     TaskBean taskBean;
-    @Inject
+    @EJB
     UserBean userBean;
-    @Inject
-    CategoryBean categoryBean;
-    @Inject
+    @EJB
     UserDao userDao;
 
     public boolean setStatistics(StatisticsDto statisticsDto){
@@ -29,7 +28,6 @@ public class StatisticsBean {
             tasksNumberByStatus[1] = (taskBean.tasksNumberByStatus(taskStatusManager.DOING));
             tasksNumberByStatus[2] = (taskBean.tasksNumberByStatus(taskStatusManager.DONE));
             statisticsDto.setTasksNumberByState(tasksNumberByStatus);
-            statisticsDto.setCategoriesList(categoryBean.ordenedCategoriesList());
             statisticsDto.setAverageConclusionTime(taskBean.calculateTaskAverageConclusionTime());
             statisticsDto.setNumberOfUsersRegisterByHour(userBean.calculateUsersByHour());
             statisticsDto.setCumulativeTasksNumberByHour(taskBean.calculateConclusionsByDayAndHour());
@@ -47,7 +45,7 @@ public class StatisticsBean {
         appCreationDate = appCreationDate.plusHours(1).withMinute(0).withSecond(0).withNano(0);
 
         // Calculate the total number of hours between app creation date and present date
-        long totalHours = appCreationDate.until(presentDate, java.time.temporal.ChronoUnit.HOURS);
+        long totalHours = appCreationDate.until(presentDate, java.time.temporal.ChronoUnit.HOURS)+1;
 
         // Initialize an array to store hours
         LocalDateTime[] hoursArray = new LocalDateTime[(int)totalHours+1];

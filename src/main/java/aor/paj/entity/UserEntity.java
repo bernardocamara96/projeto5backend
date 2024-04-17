@@ -20,7 +20,7 @@ import java.util.Set;
 @NamedQuery(name = "User.findRegisterDateByUsername", query = "SELECT u.registerDate FROM UserEntity u WHERE u.username=:username")
 @NamedQuery(name = "User.findLastActivityDateByToken", query = "SELECT u.lastActivityDate  FROM UserEntity u WHERE u.token=:token")
 @NamedQuery(name = "User.updateLastActivityDateByToken", query = "UPDATE UserEntity u SET u.lastActivityDate = :lastActivityDate WHERE u.token = :token")
-
+@NamedQuery(name = "User.findAllTokens", query = "SELECT u.token FROM UserEntity u WHERE u.token IS NOT NULL")
 
 public class UserEntity implements Serializable {
     private static final long serialVersionUID = 1L;
