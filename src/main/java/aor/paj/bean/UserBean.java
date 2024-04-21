@@ -266,6 +266,14 @@ public class UserBean implements Serializable {
         return base64Encoder.encodeToString(randomBytes);
     }
 
+
+    public UserPhotoDto getUserPhotoDtoByUsername(String username){
+        UserEntity userEntity=userDao.findUserByUsername(username);
+        UserPhotoDto userPhotoDto=new UserPhotoDto(userEntity.getFirstName(), userEntity.getPhotoURL(), userEntity.getDeleted(), userEntity.isConfirmed());
+
+        return userPhotoDto;
+    }
+
     public String getPhotoURLByUsername(String token) {
         UserEntity user = userDao.findUserByToken(token);
         return user.getPhotoURL();

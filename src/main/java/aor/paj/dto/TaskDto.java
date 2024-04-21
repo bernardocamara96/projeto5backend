@@ -1,10 +1,18 @@
 package aor.paj.dto;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import jakarta.validation.constraints.NotNull;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
+
+import util.OtherLocalDateAdapter;
+
+
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 
 /**
  * Task is a core entity representing a task in the system, including details such as title, description, priority,
@@ -121,18 +129,14 @@ public class TaskDto {
         this.username_author = username_author;
     }
 
+
     @Override
     public String toString() {
-        return "TaskDto{" +
-                "startDate=" + startDate +
-                ", endDate=" + endDate +
-                ", id=" + id +
-                ", title='" + title + '\'' +
-                ", description='" + description + '\'' +
-                ", priority=" + priority +
-                ", status=" + status +
-                ", username_author='" + username_author + '\'' +
-                ", category_type='" + category_type + '\'' +
-                '}';
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(LocalDate.class, new OtherLocalDateAdapter())
+                // Other Gson configuration...
+                .create();
+        return gson.toJson(this);
     }
+
 }

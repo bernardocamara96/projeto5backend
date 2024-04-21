@@ -1,8 +1,11 @@
 package aor.paj.websocket;
 
+import aor.paj.bean.AppConfigurationsBean;
+import aor.paj.bean.PermissionBean;
 import aor.paj.bean.StatisticsBean;
 import aor.paj.bean.UserBean;
 import aor.paj.dto.StatisticsDto;
+import aor.paj.service.status.Function;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ejb.Singleton;
@@ -24,6 +27,11 @@ public class DashboardWebSocket {
     StatisticsBean statisticsBean;
     @Inject
     UserBean userBean;
+    @Inject
+    AppConfigurationsBean appConfigurationsBean;
+    @Inject
+    PermissionBean permissionBean;
+
 
 
     public void send() throws IOException {
@@ -32,16 +40,10 @@ public class DashboardWebSocket {
         for (String token:tokens) {
             Session session = sessions.get(token);
             if (session != null) {
-
                 StatisticsDto statisticsDto = new StatisticsDto();
                 statisticsBean.setStatistics(statisticsDto);
-
-
                 try {
-                   // String json = statisticsDto.toString();
-
-                    String json = statisticsDto.toString();
-                    session.getBasicRemote().sendText(json);
+                    session.getBasicRemote().sendText(statisticsDto.toString());
                     System.out.println("sending.......... ");
                 } catch (IOException e) {
                     System.out.println("Something went wrong!");
@@ -51,9 +53,18 @@ public class DashboardWebSocket {
     }
     @OnOpen
     public void toDoOnOpen(Session session, @PathParam("token") String token){
-        System.out.println("A new WebSocket session is opened for client with token: "+ token);
-
-        sessions.put(token,session);
+            try {
+                if (userBean.tokenValidator(token)) {
+                    if (appConfigurationsBean.validateTimeout(token)) {
+                        if (permissionBean.getPermission(token, Function.GET_STATISTICS)) {
+                            sessions.put(token, session);
+                            System.out.println("A new Dashboard WebSocket session is opened for client with token: "+ token);
+                        } else session.close();
+                    } else session.close();
+                } else session.close();
+            }catch(IOException e){
+                System.out.println("Error opening websocket");
+            }
     }
     @OnClose
     public void toDoOnClose(Session session, CloseReason reason){
@@ -64,15 +75,7 @@ public class DashboardWebSocket {
     @OnMessage
     public void toDoOnMessage(String msg){
         System.out.println("A new message is received: "+ msg);
-//        try {
-//            if (msg.equals("getStatistics")) {
-//                // Call the send method to send statistics
-//                send(currentToken); // Assuming session.getId() returns the token
-//
-//            }
-//        } catch (IOException e) {
-//            System.out.println("Something went wrong!");
-//        }
+
     }
 
 }

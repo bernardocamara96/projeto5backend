@@ -5,12 +5,14 @@ import aor.paj.bean.PermissionBean;
 import aor.paj.bean.TaskBean;
 import aor.paj.bean.UserBean;
 import aor.paj.dto.TaskDto;
+import aor.paj.dto.TaskStatusDto;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.status.Function;
 import aor.paj.service.status.userRoleManager;
 import aor.paj.service.validator.TaskValidator;
 import aor.paj.websocket.DashboardWebSocket;
+import aor.paj.websocket.TasksWebSocket;
 import jakarta.ejb.EJB;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -37,6 +39,8 @@ public class TaskService {
     AppConfigurationsBean appConfigurationsBean;
     @Inject
     DashboardWebSocket dashboardWebSocket;
+    @Inject
+    TasksWebSocket tasksWebSocket;
 
     /**
      * creates a new task with a category with the name "type"
@@ -50,7 +54,10 @@ public class TaskService {
                 if (taskValidator.validateTask(a)) {
                     if (taskBean.addTask(token, categoryType, a)) {
                         try {
+
                             dashboardWebSocket.send();
+                            tasksWebSocket.sendNewTask(a);
+
                         }catch (IOException e){
                             return Response.status(400).entity("Websocket error").build();
                         }
@@ -71,13 +78,16 @@ public class TaskService {
     @Path("/edit/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response editTask( @PathParam("id")int id, @HeaderParam("token") String token, TaskDto taskDto) {
-
         if (userBean.tokenValidator(token)) {
            if(appConfigurationsBean.validateTimeout(token)) {
                if (taskBean.taskIdValidator(id)) {
                    if (permissionBean.getPermissionByTaskID(token, id)) {
                        taskDto.setStatus(100);
                        if (taskBean.editTask(id, taskDto)) {
+                           try {
+                               taskDto.setId(id);
+                               tasksWebSocket.sendEditTask(taskDto);
+                           }catch(IOException e) {return Response.status(200).entity("Error in websocket").build();}
                            return Response.status(200).entity("Task updated successfuly.").build();
                        } else return Response.status(400).entity("Wrong data.").build();
                    } else return Response.status(403).entity("Access Denied").build();
@@ -273,6 +283,7 @@ public class TaskService {
                         if (taskBean.changeStatus(status, id)) {
                             try {
                                 dashboardWebSocket.send();
+                                tasksWebSocket.sendStatusTask(new TaskStatusDto(id,status));
                             } catch (IOException e) {}
                             return Response.status(200).entity("Task status updated").build();
                         } else return Response.status(200).entity("Task is already with this status value").build();
@@ -296,6 +307,7 @@ public class TaskService {
                         if (taskBean.deleteTemporarily(id)) {
                             try {
                                 dashboardWebSocket.send();
+                                tasksWebSocket.sendDeleteTempTask(taskBean.getTaskDto(id));
                             } catch (IOException e) {}
                             return Response.status(200).entity("This task was successfully deleted").build();
                         } else return Response.status(400).entity("This task is already deleted").build();
@@ -319,6 +331,7 @@ public class TaskService {
                         if (taskBean.recycleTask(id)) {
                             try {
                                 dashboardWebSocket.send();
+                                tasksWebSocket.sendRecycleTask(taskBean.getTaskDto(id));
                             } catch (IOException e) {}
                             return Response.status(200).entity("This task was successfully recycled").build();
                         } else return Response.status(400).entity("This task isn't deleted").build();
@@ -339,9 +352,12 @@ public class TaskService {
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (permissionBean.getPermission(token, Function.DELETE_ALL_TASKS_BY_USER_TEMPORARILY)) {
                     if (userBean.getUserByUsername(username) != null) {
-                        taskBean.deleteAllTasksByUser(userBean.getUserByUsername(username));
+                        ArrayList<TaskDto> taskDtos=taskBean.deleteAllTasksByUser(userBean.getUserByUsername(username));
+                        System.out.println(taskDtos);
                         try {
                             dashboardWebSocket.send();
+                            tasksWebSocket.sendAllTempDeleteTasks(taskDtos);
+
                         } catch (IOException e) {}
                         return Response.status(200).entity("Tasks sucecessfully deleted").build();
                     } else return Response.status(404).entity("User with this username not found").build();
@@ -362,17 +378,15 @@ public class TaskService {
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (permissionBean.getPermission(token, Function.DELETE_TASK_PERMANENTLY)) {
                     if (taskBean.taskIdValidator(id)) {
+                        TaskDto taskDto=taskBean.getTaskDto(id);
                         boolean deleted = taskBean.deleteTaskPermanently(id);
                         if (deleted){
                             try {
                                 dashboardWebSocket.send();
+                                tasksWebSocket.sendPermDeleteTask(taskDto);
                             } catch (IOException e) {}
                             return Response.status(200).entity("This task permanently deleted ").build();}
-                        else{
-                            try {
-                                dashboardWebSocket.send();
-                            } catch (IOException e) {}
-                            return Response.status(400).entity("This task is already deleted").build();}
+                        else return Response.status(400).entity("This task is already deleted").build();
                     } else return Response.status(400).entity("Task with this id not found").build();
                 } else return Response.status(403).entity("User permissions violated").build();
             }else return Response.status(401).entity("Session has expired").build();

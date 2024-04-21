@@ -3,10 +3,7 @@ package aor.paj.bean;
 import aor.paj.dao.CategoryDao;
 import aor.paj.dao.TaskDao;
 import aor.paj.dao.UserDao;
-import aor.paj.dto.CategoryDto;
-import aor.paj.dto.StatisticsDto;
-import aor.paj.dto.TaskDto;
-import aor.paj.dto.User;
+import aor.paj.dto.*;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
@@ -77,6 +74,8 @@ public class TaskBean{
         TaskEntity taskEntity=convertTaskDtotoTaskEntity(taskDto);
         CategoryEntity categoryEntity=categoryDao.findCategoryByType(type);
         if(categoryEntity!=null) {
+            taskDto.setCategory_type(type);
+            taskDto.setUsername_author(userEntity.getUsername());
             taskEntity.setUser(userEntity);
             taskEntity.setCategory(categoryEntity);
             taskEntity.setTitle(taskDto.getTitle());
@@ -90,6 +89,7 @@ public class TaskBean{
             if(taskDto.getEndDate()!=null) {
                 taskEntity.setEndDate(taskDto.getEndDate());
             }
+
             taskDao.persist(taskEntity);
             return true;
         }
@@ -105,6 +105,9 @@ public class TaskBean{
         else return true;
     }
 
+    public TaskDto getTaskDto(int taskId){
+        return convertTaskEntitytoTaskDto(getTaskById(taskId));
+    }
 
     public boolean taskDeletePermission(String token){
         UserEntity userEntity=userDao.findUserByToken(token);
@@ -122,6 +125,7 @@ public class TaskBean{
         if(taskValidator.validateTask(taskDto) && categoryDao.findCategoryByType(taskDto.getCategory_type())!=null){
             TaskEntity taskEntity=taskDao.findTaskById(id);
             if(taskEntity==null) return false;
+            taskDto.setStatus(taskEntity.getStatus());
             taskEntity.setCategory(categoryDao.findCategoryByType(taskDto.getCategory_type()));
             taskEntity.setTitle(taskDto.getTitle());
             taskEntity.setDescription(taskDto.getDescription());
@@ -184,12 +188,17 @@ public class TaskBean{
 
     }
 
-    public void deleteAllTasksByUser(UserEntity user){
+    public ArrayList<TaskDto> deleteAllTasksByUser(UserEntity user){
         ArrayList<TaskEntity> tasksEntities=getAllTasksByUsername(user.getUsername());
+        ArrayList<TaskDto> taskDtos=new ArrayList<>();
         for (TaskEntity task:tasksEntities){
-            task.setDeleted(true);
-            taskDao.merge(task);
+            if(!task.isDeleted()) {
+                task.setDeleted(true);
+                taskDao.merge(task);
+                taskDtos.add(convertTaskEntitytoTaskDto(task));
+            }
         }
+        return taskDtos;
     }
 
     public boolean validateStatus(int status){

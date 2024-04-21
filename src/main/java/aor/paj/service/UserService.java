@@ -121,6 +121,18 @@ public class UserService {
         } else return Response.status(403).entity("Access denied").build();
     }
 
+    @GET
+    @Path("/photoandname/{username}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getPhoto(@HeaderParam("token")String token, @PathParam("username")String username) {
+        if (userBean.tokenValidator(token)) {
+            if(appConfigurationsBean.validateTimeout(token)) {
+                    UserPhotoDto userPhotoDto=userBean.getUserPhotoDtoByUsername(username);
+                    appConfigurationsBean.setLastActivityDate(token);
+                    return Response.status(200).entity(userPhotoDto).build();
+            } else return Response.status(401).entity("Session has expired").build();
+        } else return Response.status(403).entity("Access denied").build();
+    }
     /**
      * Retrieves user information for the given username.
      * If the username or password is missing in the request headers, returns a status code 401 (Unauthorized)
@@ -289,7 +301,7 @@ public class UserService {
                     } else return Response.status(500).entity("An error occurred while updating user password").build();
                 } else return Response.status(404).entity("User still not confirmed").build();
             } else return Response.status(400).entity("Invalid Data").build();
-        }else return Response.status(401).entity("Login Failed, Passwords do not match or New password must be different from the old password").build();
+        }else return Response.status(401).entity("Access denied").build();
     }
 
     @POST

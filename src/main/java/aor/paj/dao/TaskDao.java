@@ -148,9 +148,9 @@ public class TaskDao extends AbstractDao<TaskEntity> {
 	public List<LocalDateTime> getAllConclusionDates(){
 		try {
 			return  em.createNamedQuery("Task.findAllLastDoneDates").getResultList();
-		}catch (Exception e){
+		}catch ( Exception e){
 			return null;
 		}
-	}
+    }
 
 }

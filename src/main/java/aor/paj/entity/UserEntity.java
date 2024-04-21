@@ -60,6 +60,10 @@ public class UserEntity implements Serializable {
 
     @OneToMany(mappedBy = "author")
     private Set<CategoryEntity>  categories;
+    @OneToMany(mappedBy = "sender")
+    private Set<MessageEntity>  messagesSend;
+    @OneToMany(mappedBy = "recipient")
+    private Set<MessageEntity>  messagesReceived;
 
     //default empty constructor
     public UserEntity() {}
@@ -194,13 +198,6 @@ public class UserEntity implements Serializable {
         this.registerDate = registerDate;
     }
 
-    public Set<CategoryEntity> getCategories() {
-        return categories;
-    }
-
-    public void setCategories(Set<CategoryEntity> categories) {
-        this.categories = categories;
-    }
 
     public LocalDateTime getLastActivityDate() {
         return lastActivityDate;
