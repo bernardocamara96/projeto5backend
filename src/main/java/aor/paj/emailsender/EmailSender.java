@@ -39,7 +39,7 @@ public class EmailSender {
             message.setSubject("Confirm Your Account Registration");
 
             emailContent = "<p>Dear " + userUsername + "</p>"
-                    + "<p>Thank you for registering with AntNest!</p>"
+                    + "<p>Thank you for registering with AgileFlow!</p>"
                     + "<p>To complete the registration process and gain full access to your account, please click on the link below to confirm your email address:</p>"
                     + "<p><a href='http://localhost:5173/confirmEmail/" + verificationLink + "'>http://localhost:5173/confirmEmail/" + verificationLink + "</a></p>"
                     + "<p>If you did not request this registration, please ignore this email.</p>"

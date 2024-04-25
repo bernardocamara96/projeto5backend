@@ -20,7 +20,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hibernate.annotations.CollectionIdJavaType;
-
+import org.apache.logging.log4j.*;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -41,6 +41,7 @@ public class TaskService {
     DashboardWebSocket dashboardWebSocket;
     @Inject
     TasksWebSocket tasksWebSocket;
+    private static final Logger logger=LogManager.getLogger(UserService.class);
 
     /**
      * creates a new task with a category with the name "type"
@@ -54,10 +55,8 @@ public class TaskService {
                 if (taskValidator.validateTask(a)) {
                     if (taskBean.addTask(token, categoryType, a)) {
                         try {
-
                             dashboardWebSocket.send();
                             tasksWebSocket.sendNewTask(a);
-
                         }catch (IOException e){
                             return Response.status(400).entity("Websocket error").build();
                         }

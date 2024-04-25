@@ -5,11 +5,14 @@ import jakarta.persistence.Column;
 import jakarta.persistence.ManyToOne;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import util.OtherLocalDateAdapter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @XmlRootElement
 public class MessageDto {
+
 
     @XmlElement
     private String text;
@@ -110,5 +113,11 @@ public class MessageDto {
         this.senderPhoto = senderPhoto;
     }
 
-
+    @Override
+    public String toString() {
+        return "{" +
+                "\"text\": \"" + text + "\"," +
+                "\"senderPhoto\": \"" + senderPhoto + "\"" +
+                "}";
+    }
 }

@@ -19,7 +19,6 @@ import jakarta.persistence.NoResultException;
 import jakarta.validation.constraints.Email;
 import org.hibernate.annotations.DialectOverride;
 import util.HashUtil;
-import org.apache.logging.log4j.*;
 
 import java.io.*;
 import java.security.SecureRandom;
@@ -49,8 +48,6 @@ public class UserBean implements Serializable {
     EmailSender emailSender;
     @EJB
     AppConfigurationsDao appConfigurationsDao;
-
-    private static final Logger logger = LogManager.getLogger(UserBean.class);
 
 
     private UserEntity convertUserDtotoUserEntity(User user) {
@@ -190,9 +187,8 @@ public class UserBean implements Serializable {
                         if (userEntity.getPassword().equals(user.getPassword())) {
                             String token = generateNewToken();
                             userEntity.setToken(token);
-                            logger.info(user.getUsername() + ": logged in app");
                             return token;
-                        } else logger.error(user.getUsername() + ": error logging in app");
+                        }
                     }
                 } else return userEntity.getToken();
             }
@@ -542,5 +538,12 @@ public class UserBean implements Serializable {
         return userDao.getRegisterDate("admin");
     }
 
+    public String findUsernameByToken(String token){
+        return userDao.findUsernameByToken(token);
+    }
+
+    public String findUsernameByAuxiliarToken(String auxiliarToken){
+        return userDao.findUsernameByAuxiliarToken(auxiliarToken);
+    }
 
 }

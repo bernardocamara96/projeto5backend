@@ -10,6 +10,15 @@ import java.time.LocalDateTime;
 @Table(name="messages")
 @NamedQuery(name = "Message.getMessagesByRecipientAndSender", query = "SELECT m FROM MessageEntity m WHERE (m.sender = :sender AND m.recipient=:recipient) OR( m.recipient=:sender AND m.sender=:recipient) ORDER BY m.sendDate")
 @NamedQuery(name="Message.setSeenToTrue",query="UPDATE MessageEntity m SET m.seen = true " + "WHERE m.sender=:sender AND m.recipient=:recipient AND m.seen = false")
+@NamedQuery(name="Message.getMessageSeenFalse",query="SELECT m FROM MessageEntity m WHERE m.sender=:sender AND m.recipient=:recipient AND m.seen = false")
+@NamedQuery(name="Message.getMessagesNumberByRecipient", query="SELECT COUNT(m) FROM MessageEntity m WHERE m.recipient=:recipient AND m.seen=false")
+@NamedQuery(name="Message.getMessagesSeenFalseNumber",query="SELECT COUNT(m) FROM MessageEntity m WHERE m.sender=:sender AND m.recipient=:recipient AND m.seen = false")
+@NamedQuery(name="Message.getMessagesSeenFalseByRecipient",query="SELECT m FROM MessageEntity m WHERE  m.recipient=:recipient AND m.seen = false ORDER BY m.sendDate DESC")
+@NamedQuery(name="Message.setSeenToTrueByRecipient",query="UPDATE MessageEntity m SET m.seen = true " + "WHERE  m.recipient=:recipient AND m.seen = false")
+@NamedQuery(name="Message.getMessagesByRecipient",query="SELECT m FROM MessageEntity m WHERE  m.recipient=:recipient AND m.seen = true ORDER BY m.sendDate DESC")
+@NamedQuery(name="Message.deleteMessageById", query="DELETE FROM MessageEntity m WHERE m.id=:id")
+@NamedQuery(name="Message.getMessagesByUser",query="SELECT m FROM MessageEntity m WHERE m.sender=:user OR m.recipient=:user")
+
 
 public class MessageEntity implements Serializable {
 
@@ -18,7 +27,7 @@ public class MessageEntity implements Serializable {
     @Id
     @GeneratedValue(strategy =  GenerationType.IDENTITY)
     @Column(name="id", nullable = false,unique = true,updatable = false)
-    private int id;
+    private long id;
     @Column(name="text", nullable = true,unique =false,updatable = true)
     private String text;
     @Column (name="send_date", nullable = false, unique = false,updatable = false)
@@ -42,11 +51,11 @@ public class MessageEntity implements Serializable {
         this.recipient = recipient;
     }
 
-    public int getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(long id) {
         this.id = id;
     }
 

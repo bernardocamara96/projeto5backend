@@ -167,4 +167,34 @@ public class UserDao extends AbstractDao<UserEntity> {
 		}
 	}
 
+	public String findTokenByUsername(String username) {
+		try {
+			return (String) em.createNamedQuery("User.findTokenByUsername").setParameter("username", username)
+					.getSingleResult();
+
+		} catch (NoResultException | NullPointerException e) {
+			return null;
+		}
+	}
+
+	public String findUsernameByToken(String token) {
+		try {
+			return (String) em.createNamedQuery("User.findUsernameByToken").setParameter("token", token)
+					.getSingleResult();
+
+		} catch (NoResultException | NullPointerException e) {
+			return null;
+		}
+	}
+
+	public String findUsernameByAuxiliarToken(String auxiliarToken) {
+		try {
+			return (String) em.createNamedQuery("User.findUsernameByAuxiliarToken").setParameter("auxiliarToken", auxiliarToken)
+					.getSingleResult();
+
+		} catch (NoResultException | NullPointerException e) {
+			return null;
+		}
+	}
+
 }
