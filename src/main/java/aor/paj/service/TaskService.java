@@ -22,6 +22,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hibernate.annotations.CollectionIdJavaType;
 import org.apache.logging.log4j.*;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 
@@ -41,7 +43,7 @@ public class TaskService {
     DashboardWebSocket dashboardWebSocket;
     @Inject
     TasksWebSocket tasksWebSocket;
-    private static final Logger logger=LogManager.getLogger(UserService.class);
+    private static final Logger logger=LogManager.getLogger(TaskService.class);
 
     /**
      * creates a new task with a category with the name "type"
@@ -49,7 +51,7 @@ public class TaskService {
     @POST
     @Path("/{type}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response createTask(@HeaderParam("token") String token,@PathParam("type")String categoryType, TaskDto a) {
+    public Response createTask(@HeaderParam("token") String token,@PathParam("type")String categoryType, TaskDto a) throws UnknownHostException {
         if (userBean.tokenValidator(token)) {
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (taskValidator.validateTask(a)) {
@@ -60,14 +62,22 @@ public class TaskService {
                         }catch (IOException e){
                             return Response.status(400).entity("Websocket error").build();
                         }
+                        logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.findUsernameByToken(token)+" created a new task with the title "+a.getTitle());
                         return Response.status(201).entity("A new task has been created").build();
                     }
+                    logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to create a task with an invalid category");
                     return Response.status(400).entity("Invalid task type").build();
                 }
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to create a task with an invalid data");
                 return Response.status(400).entity("Invalid task data").build();
-            }else return Response.status(401).entity("Session has expired").build();
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expiered when trying to create a task");
+                return Response.status(401).entity("Session has expired").build();
+            }
 
-        }return Response.status(403).entity("User permissions violated").build();
+        }
+        logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when trying to create a task");
+        return Response.status(403).entity("User permissions violated").build();
     }
 
     /**
@@ -76,7 +86,7 @@ public class TaskService {
     @PATCH
     @Path("/edit/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response editTask( @PathParam("id")int id, @HeaderParam("token") String token, TaskDto taskDto) {
+    public Response editTask( @PathParam("id")int id, @HeaderParam("token") String token, TaskDto taskDto) throws UnknownHostException {
         if (userBean.tokenValidator(token)) {
            if(appConfigurationsBean.validateTimeout(token)) {
                if (taskBean.taskIdValidator(id)) {
@@ -86,13 +96,31 @@ public class TaskService {
                            try {
                                taskDto.setId(id);
                                tasksWebSocket.sendEditTask(taskDto);
-                           }catch(IOException e) {return Response.status(200).entity("Error in websocket").build();}
+                           }catch(IOException e) {
+                               logger.error(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had an websocket error when tried to update a task");
+                               return Response.status(200).entity("Error in websocket").build();}
+                           logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" updated the task with the title "+taskDto.getTitle());
                            return Response.status(200).entity("Task updated successfuly.").build();
-                       } else return Response.status(400).entity("Wrong data.").build();
-                   } else return Response.status(403).entity("Access Denied").build();
-               } else return Response.status(404).entity("Task with this id not found").build();
-           }else return Response.status(401).entity("Session has expired").build();
-        } else return Response.status(403).entity("User permissions violated").build();
+                       } else {
+                           logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to update a task with wrong data");
+                           return Response.status(400).entity("Wrong data.").build();
+                       }
+                   } else {
+                       logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when tried to update a task with the title "+taskDto.getTitle());
+                       return Response.status(403).entity("Access Denied").build();
+                   }
+               } else {
+                   logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to update a task with an id that doesn't exist");
+                   return Response.status(404).entity("Task with this id not found").build();
+               }
+           }else{
+               logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when tried to update a task");
+               return Response.status(401).entity("Session has expired").build();
+           }
+        } else {
+            logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when tried to update a task");
+            return Response.status(403).entity("User permissions violated").build();
+        }
     }
 
     /**
@@ -101,7 +129,7 @@ public class TaskService {
     @GET
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getAllTasks(@HeaderParam("token") String token) {
+    public Response getAllTasks(@HeaderParam("token") String token) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (permissionBean.getPermission(token, Function.GET_ALL_TASKS)) {
@@ -111,11 +139,19 @@ public class TaskService {
                         TaskDto taskDto = taskBean.convertTaskEntitytoTaskDto(task);
                         tasksDtos.add(taskDto);
                     }
+                    logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" requested all tasks");
                     return Response.status(200).entity(tasksDtos).build();
                 }
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to request all tasks without permissions");
                 return Response.status(403).entity("User permissions violated").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        }return Response.status(403).entity("User not logged").build();
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had session expired when tried to request all tasks");
+                return Response.status(401).entity("Session has expired").build();
+            }
+
+        }
+        logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when tried to request all tasks");
+        return Response.status(403).entity("User not logged").build();
     }
 
     /**
@@ -124,14 +160,24 @@ public class TaskService {
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getTaskById(@PathParam("id") int id, @HeaderParam("token") String token) {
+    public Response getTaskById(@PathParam("id") int id, @HeaderParam("token") String token) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (taskBean.taskIdValidator(id)) {
+                    logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" requested the information about a task");
                     return Response.status(200).entity(taskBean.convertTaskEntitytoTaskDto(taskBean.getTaskById(id))).build();
-                } else return Response.status(404).entity("Task with this id not found").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        }else return Response.status(403).entity("User permissions violated").build();
+                } else{
+                    logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" requested information about a task with a id that doesn't exist");
+                    return Response.status(404).entity("Task with this id not found").build();
+                }
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had session expired when tried to request information about a task");
+                return Response.status(401).entity("Session has expired").build();
+            }
+        }else {
+            logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when tried to request information about a task");
+            return Response.status(403).entity("User permissions violated").build();
+        }
     }
 
     /**
@@ -140,7 +186,7 @@ public class TaskService {
     @GET
     @Path("/allnotdeleted")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getAllTasksNotDeleted(@HeaderParam("token") String token) {
+    public Response getAllTasksNotDeleted(@HeaderParam("token") String token) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 ArrayList<TaskEntity> tasksEntities = taskBean.getAllTasksByDeleted(false);
@@ -148,10 +194,17 @@ public class TaskService {
                 for (TaskEntity task : tasksEntities) {
                     tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
                 }
+                logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" requested all tasks that are not deleted");
                 return Response.status(200).entity(tasksDtos).build();
-            }else return Response.status(401).entity("Session has expired").build();
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when tried to request all tasks that are not deleted");
+                return Response.status(401).entity("Session has expired").build();
+            }
         }
-        else return Response.status(403).entity("User permissions violated").build();
+        else {
+            logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when tried to request all tasks that are not deleted");
+            return Response.status(403).entity("User permissions violated").build();
+        }
     }
 
     /**
@@ -160,7 +213,7 @@ public class TaskService {
     @GET
     @Path("/alldeleted")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getAllTasksDeleted(@HeaderParam("token") String token) {
+    public Response getAllTasksDeleted(@HeaderParam("token") String token) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (permissionBean.getPermission(token, Function.GET_ALL_TASKS_DELETED)) {
@@ -169,11 +222,18 @@ public class TaskService {
                     for (TaskEntity task : tasksEntities) {
                         tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
                     }
+                    logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" requested all deleted tasks ");
                     return Response.status(200).entity(tasksDtos).build();
                 }
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when requested all deleted tasks ");
                 return Response.status(403).entity("User permissions violated").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        }return Response.status(403).entity("User permissions violated").build();
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when requested all deleted tasks");
+                return Response.status(401).entity("Session has expired").build();
+            }
+        }
+        logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when requested all deleted tasks ");
+        return Response.status(403).entity("User permissions violated").build();
     }
 
 
@@ -183,7 +243,7 @@ public class TaskService {
     @GET
     @Path("/number/{username}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getTasksNumberByUser(@HeaderParam("token") String token,@PathParam("username") String username) {
+    public Response getTasksNumberByUser(@HeaderParam("token") String token,@PathParam("username") String username) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (permissionBean.getPermission(token, Function.GET_ALL_TASKS_BY_USER)) {
@@ -194,11 +254,18 @@ public class TaskService {
                             tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
                         }
                     }
+                    logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" requested the number of tasks from "+username);
                     return Response.status(200).entity(tasksDtos.size()).build();
                 }
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when requested the number of tasks from "+username);
                 return Response.status(200).entity("User permissions violated").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        }return Response.status(403).entity("User permissions violated").build();
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when requested the number of tasks from "+username);
+                return Response.status(401).entity("Session has expired").build();
+            }
+        }
+        logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when requested the number of tasks from "+username);
+        return Response.status(403).entity("User permissions violated").build();
     }
 
     /**
@@ -207,7 +274,7 @@ public class TaskService {
     @GET
     @Path("/byuser")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getAllTasksByUser(@HeaderParam("token") String token,@QueryParam("username") String username) {
+    public Response getAllTasksByUser(@HeaderParam("token") String token,@QueryParam("username") String username) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (permissionBean.getPermission(token, Function.GET_ALL_TASKS_BY_USER)) {
@@ -218,11 +285,18 @@ public class TaskService {
                             tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
                         }
                     }
+                    logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" requested the tasks from "+username);
                     return Response.status(200).entity(tasksDtos).build();
                 }
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when requested the tasks from "+username);
                 return Response.status(200).entity("User permissions violated").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        }return Response.status(403).entity("User permissions violated").build();
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when requested the tasks from "+username);
+                return Response.status(401).entity("Session has expired").build();
+            }
+        }
+        logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when requested the tasks from "+username);
+        return Response.status(403).entity("User permissions violated").build();
     }
 
 
@@ -232,7 +306,7 @@ public class TaskService {
     @GET
     @Path("/bycategory")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getAllTasksByCategory(@HeaderParam("token")String token, @QueryParam("category")String category_type){
+    public Response getAllTasksByCategory(@HeaderParam("token")String token, @QueryParam("category")String category_type) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (permissionBean.getPermission(token, Function.GET_ALL_TASKS_BY_CATEGORY)) {
@@ -243,11 +317,18 @@ public class TaskService {
                             tasksDtos.add(taskBean.convertTaskEntitytoTaskDto(task));
                         }
                     }
+                    logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" requested all tasks with the category "+category_type);
                     return Response.status(200).entity(tasksDtos).build();
                 }
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when requested all tasks with the category "+category_type);
                 return Response.status(403).entity("User permissions violated").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        }return Response.status(403).entity("User permissions violated").build();
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when requested all tasks with the category "+category_type);
+                return Response.status(401).entity("Session has expired").build();
+            }
+        }
+        logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when requested all tasks with the category "+category_type);
+        return Response.status(403).entity("User permissions violated").build();
     }
 
     /**
@@ -256,16 +337,26 @@ public class TaskService {
     @GET
     @Path("/byuserandcategory")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getTasksByUserAndCategory(@HeaderParam("token")String token,@QueryParam("username")String username,@QueryParam("category")String category){
+    public Response getTasksByUserAndCategory(@HeaderParam("token")String token,@QueryParam("username")String username,@QueryParam("category")String category) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)){
                 if(permissionBean.getPermission(token, Function.GET_ALL_TASKS_BY_CATEGORY_AND_USER)) {
                     if (userBean.getUserByUsername(username) != null) {
+                        logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" requested the tasks from the user "+username+" and with the category "+category);
                         return Response.status(200).entity(taskBean.getTaskByUsernameAndCategory(category, username)).build();
-                    }return Response.status(400).entity("Doesn't exist any User with that Username").build();
-                }return Response.status(403).entity("User permissions violated").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        }return Response.status(403).entity("User permissions violated").build();
+                    }
+                    logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to request the tasks from a user that doesn't exist");
+                    return Response.status(400).entity("Doesn't exist any User with that Username").build();
+                }
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when tried to request the tasks from the user "+username+" with the category "+category);
+                return Response.status(403).entity("User permissions violated").build();
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when treid to request the tasks from the user "+username+" with the category "+category);
+                return Response.status(401).entity("Session has expired").build();
+            }
+        }
+        logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when tried to request the tasks from the user "+username+" with the category "+category);
+        return Response.status(403).entity("User permissions violated").build();
     }
 
     /**
@@ -274,7 +365,7 @@ public class TaskService {
     @PATCH
     @Path("/status/{id}/{status}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response changeTaskStatus(@PathParam("id")int id,@HeaderParam("token")String token, @PathParam("status")int status){
+    public Response changeTaskStatus(@PathParam("id")int id,@HeaderParam("token")String token, @PathParam("status")int status) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (taskBean.taskIdValidator(id)) {
@@ -283,13 +374,31 @@ public class TaskService {
                             try {
                                 dashboardWebSocket.send();
                                 tasksWebSocket.sendStatusTask(new TaskStatusDto(id,status));
-                            } catch (IOException e) {}
+                            } catch (IOException e) {
+                                logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had an websocket error when changing the status of a task");
+                            }
+                            logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" changed the status of a task");
                             return Response.status(200).entity("Task status updated").build();
-                        } else return Response.status(200).entity("Task is already with this status value").build();
-                    } else return Response.status(400).entity("Status value is invalid").build();
-                } else return Response.status(404).entity("Task with this id not found").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        }else return Response.status(403).entity("User permissions violated").build();
+                        } else {
+                            logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried change the status of task to the same status");
+                            return Response.status(200).entity("Task is already with this status value").build();
+                        }
+                    } else {
+                        logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to change the status of a task to an invalid status");
+                        return Response.status(400).entity("Status value is invalid").build();
+                    }
+                } else {
+                    logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried change the status of a task with an id that doesn't exist");
+                    return Response.status(404).entity("Task with this id not found").build();
+                }
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when trying to change the status of a task");
+                return Response.status(401).entity("Session has expired").build();
+            }
+        }else {
+            logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when trying to change the status of a task");
+            return Response.status(403).entity("User permissions violated").build();
+        }
     }
 
     /**
@@ -298,7 +407,7 @@ public class TaskService {
     @PATCH
     @Path("/deletetemp/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response deleteTaskTemporarily(@PathParam("id")int id, @HeaderParam("token")String token){
+    public Response deleteTaskTemporarily(@PathParam("id")int id, @HeaderParam("token")String token) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (taskBean.taskIdValidator(id)) {
@@ -307,13 +416,29 @@ public class TaskService {
                             try {
                                 dashboardWebSocket.send();
                                 tasksWebSocket.sendDeleteTempTask(taskBean.getTaskDto(id));
-                            } catch (IOException e) {}
+                            } catch (IOException e) {     logger.error(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had an websocket error when deleting temporarily a task");}
+                            logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" deleted a task");
                             return Response.status(200).entity("This task was successfully deleted").build();
-                        } else return Response.status(400).entity("This task is already deleted").build();
-                    } else return Response.status(403).entity("User permissions violated").build();
-                } else return Response.status(404).entity("Task with this id not found").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        } else return Response.status(403).entity("User permissions violated").build();
+                        } else {
+                            logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to delete a task that was already deleted");
+                            return Response.status(400).entity("This task is already deleted").build();
+                        }
+                    } else {
+                        logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when tried to delete a task");
+                        return Response.status(403).entity("User permissions violated").build();
+                    }
+                } else {
+                    logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to delete a task with an id that doesn't exist");
+                    return Response.status(404).entity("Task with this id not found").build();
+                }
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when tried to delete a task");
+                return Response.status(401).entity("Session has expired").build();
+            }
+        } else {
+            logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when tried to delete a task");
+            return Response.status(403).entity("User permissions violated").build();
+        }
     }
 
     /**
@@ -322,7 +447,7 @@ public class TaskService {
     @PATCH
     @Path("/recycle/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response recycleTask(@PathParam("id")int id, @HeaderParam("token")String token){
+    public Response recycleTask(@PathParam("id")int id, @HeaderParam("token")String token) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (permissionBean.getPermission(token, Function.RECYCLY_TASK_BY_ID)) {
@@ -331,13 +456,31 @@ public class TaskService {
                             try {
                                 dashboardWebSocket.send();
                                 tasksWebSocket.sendRecycleTask(taskBean.getTaskDto(id));
-                            } catch (IOException e) {}
+                            } catch (IOException e) {
+                                logger.error(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had an websocket error when tried to recycle a task");
+                            }
+                            logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" recycle a task");
                             return Response.status(200).entity("This task was successfully recycled").build();
-                        } else return Response.status(400).entity("This task isn't deleted").build();
-                    } else return Response.status(404).entity("Task with this id not found").build();
-                } else return Response.status(403).entity("User permissions violated").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        } else return Response.status(403).entity("User permissions violated").build();
+                        } else {
+                            logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to recycle a task that wasn't deleted");
+                            return Response.status(400).entity("This task isn't deleted").build();
+                        }
+                    } else {
+                        logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to recycle a task with an id that doesn't exist");
+                        return Response.status(404).entity("Task with this id not found").build();
+                    }
+                } else {
+                    logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when tried to recycle a task");
+                    return Response.status(403).entity("User permissions violated").build();
+                }
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when tried to recycle a task");
+                return Response.status(401).entity("Session has expired").build();
+            }
+        } else {
+            logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when tried to recycle a task");
+            return Response.status(403).entity("User permissions violated").build();
+        }
     }
 
     /**
@@ -346,7 +489,7 @@ public class TaskService {
     @DELETE
     @Path("/temp/all/{username}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response deleteAllTasksTemporarily(@PathParam("username")String username,@HeaderParam("token")String token){
+    public Response deleteAllTasksTemporarily(@PathParam("username")String username,@HeaderParam("token")String token) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (permissionBean.getPermission(token, Function.DELETE_ALL_TASKS_BY_USER_TEMPORARILY)) {
@@ -357,12 +500,25 @@ public class TaskService {
                             dashboardWebSocket.send();
                             tasksWebSocket.sendAllTempDeleteTasks(taskDtos);
 
-                        } catch (IOException e) {}
+                        } catch (IOException e) {     logger.error(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had an websocket error when deleted all task from "+username);}
+                        logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" deleted all tasks from "+username);
                         return Response.status(200).entity("Tasks sucecessfully deleted").build();
-                    } else return Response.status(404).entity("User with this username not found").build();
-                } else return Response.status(403).entity("User permissions violated").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        }else return Response.status(403).entity("User permissions violated").build();
+                    } else {
+                        logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to delete all task from an user that doesn't exist");
+                        return Response.status(404).entity("User with this username not found").build();
+                    }
+                } else {
+                    logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when tried to delete all tasks from "+username);
+                    return Response.status(403).entity("User permissions violated").build();
+                }
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when tried to delete all tasks from "+username);
+                return Response.status(401).entity("Session has expired").build();
+            }
+        }else {
+            logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when tried to delete all tasks from "+username);
+            return Response.status(403).entity("User permissions violated").build();
+        }
     }
 
 
@@ -372,7 +528,7 @@ public class TaskService {
     @DELETE
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response deleteTaskPermanently(@PathParam("id")int id, @HeaderParam("token")String token){
+    public Response deleteTaskPermanently(@PathParam("id")int id, @HeaderParam("token")String token) throws UnknownHostException {
         if(userBean.tokenValidator(token)){
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (permissionBean.getPermission(token, Function.DELETE_TASK_PERMANENTLY)) {
@@ -383,13 +539,29 @@ public class TaskService {
                             try {
                                 dashboardWebSocket.send();
                                 tasksWebSocket.sendPermDeleteTask(taskDto);
-                            } catch (IOException e) {}
+                            } catch (IOException e) {     logger.error(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" when permanently deleted a task");}
+                            logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" permanently deleted a task");
                             return Response.status(200).entity("This task permanently deleted ").build();}
-                        else return Response.status(400).entity("This task is already deleted").build();
-                    } else return Response.status(400).entity("Task with this id not found").build();
-                } else return Response.status(403).entity("User permissions violated").build();
-            }else return Response.status(401).entity("Session has expired").build();
-        } else return Response.status(403).entity("User permissions violated").build();
+                        else {
+                            logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to permanently delete a task that was already deleted");
+                            return Response.status(400).entity("This task is already deleted").build();
+                        }
+                    } else {
+                        logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" tried to permanently delete a task with an id that doesn't exist");
+                        return Response.status(400).entity("Task with this id not found").build();
+                    }
+                } else {
+                    logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.getUsername(token)+" had access denied when tried to permanently deleted a task");
+                    return Response.status(403).entity("User permissions violated").build();
+                }
+            }else {
+                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when tried to permanently deleted a task");
+                return Response.status(401).entity("Session has expired").build();
+            }
+        } else {
+            logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when tried to permanently deleted a task");
+            return Response.status(403).entity("User permissions violated").build();
+        }
     }
 
     /**

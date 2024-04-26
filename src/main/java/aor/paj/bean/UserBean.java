@@ -25,6 +25,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -506,9 +507,9 @@ public class UserBean implements Serializable {
 
         LocalDateTime appCreationDate = userDao.getRegisterDate("admin"); // Replace this with the actual app creation date
         LocalDateTime presentDate = LocalDateTime.now(); // Current date and time
-
+        appCreationDate = appCreationDate.toLocalDate().atStartOfDay();
         // Calculate the total number of hours between app creation date and present date
-        long totalHours = appCreationDate.until(presentDate, java.time.temporal.ChronoUnit.HOURS);
+        long totalHours = appCreationDate.until(presentDate, ChronoUnit.DAYS);
 
         // Initialize an ArrayList to store the number of users registered in each hour
         ArrayList<Integer> usersByHour = new ArrayList<>(Collections.nCopies((int) totalHours + 1, 0));
@@ -516,7 +517,7 @@ public class UserBean implements Serializable {
         // Iterate over each registration date and increment the corresponding hour in the ArrayList
         for (LocalDateTime registrationDate : dateOfUsersRegister) {
             // Calculate the difference in hours between app creation date and registration date
-            long hoursSinceCreation = appCreationDate.until(registrationDate, java.time.temporal.ChronoUnit.HOURS);
+            long hoursSinceCreation = appCreationDate.until(registrationDate, java.time.temporal.ChronoUnit.DAYS);
 
             // Increment the corresponding hour in the ArrayList
             if (hoursSinceCreation >= 0 && hoursSinceCreation <= totalHours) {

@@ -40,6 +40,7 @@ public class StatisticsService {
                 if (permissionBean.getPermission(token, Function.GET_STATISTICS)) {
                     StatisticsDto statisticsDto = new StatisticsDto();
                     if (statisticsBean.setStatistics(statisticsDto)) {
+                        System.out.println(statisticsDto);
                         logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.findUsernameByToken(token)+" requested the app statistics");
                         return Response.status(200).entity(statisticsDto).build();
                     } else {

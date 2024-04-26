@@ -33,7 +33,7 @@ public class CategoryService {
     TaskBean taskBean;
     @EJB
     AppConfigurationsBean appConfigurationsBean;
-    private static final Logger logger=LogManager.getLogger(UserService.class);
+    private static final Logger logger=LogManager.getLogger(CategoryService.class);
 
     /**
      *  retrieves information about a specific category identified by its ID
@@ -192,14 +192,14 @@ public class CategoryService {
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (userBean.getRoleByToken(token).equals(userRoleManager.PRODUCT_OWNER) || userBean.getRoleByToken(token).equals(userRoleManager.SCRUM_MASTER)) {
                     if (categoryBean.categoryTypeValidator(category_type)) {
-                        logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.findUsernameByToken(token)+" requested the number of tasks with category "+category_type);
+                        logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.findUsernameByToken(token)+" requested the number of tasks with category "+category_type);
                         return Response.status(200).entity(taskBean.getAllTasksByCategory(category_type).size()).build();
                     } else {
                         logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+userBean.findUsernameByToken(token)+" requested the number of tasks of a category that doesn't exist ");
                         return Response.status(404).entity("This category type doesn't exist").build();
                     }
                 } else {
-                    logger.warn(InetAddress.getLocalHost().getHostAddress()+"had access denied when requesting the number of tasks associated with the category "+category_type);
+                    logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when requesting the number of tasks associated with the category "+category_type);
                     return Response.status(403).entity("User permissions violated").build();
                 }
             }else {

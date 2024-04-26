@@ -329,8 +329,8 @@ public class TaskBean{
         List<LocalDateTime> conclusionDates = taskDao.getAllConclusionDates();
         LocalDateTime appCreationDate = userDao.getRegisterDate("admin");
         LocalDateTime presentDate = LocalDateTime.now(); // Current date and time
-
-        long totalHours = appCreationDate.until(presentDate, java.time.temporal.ChronoUnit.HOURS);
+        appCreationDate = appCreationDate.toLocalDate().atStartOfDay();
+        long totalHours = appCreationDate.until(presentDate, java.time.temporal.ChronoUnit.DAYS)+1;
 
         // Initialize an ArrayList to store the cumulative number of tasks concluded per hour
         ArrayList<Integer> cumulativeTasksByHour = new ArrayList<>(Collections.nCopies((int) totalHours+1, 0));
@@ -338,7 +338,7 @@ public class TaskBean{
         // Iterate over each conclusion date and accumulate the corresponding hour in the ArrayList
         for (LocalDateTime conclusionDate : conclusionDates) {
             // Calculate the difference in hours between app creation date and conclusion date
-            long hoursSinceCreation = appCreationDate.until(conclusionDate, java.time.temporal.ChronoUnit.HOURS);
+            long hoursSinceCreation = appCreationDate.until(conclusionDate, java.time.temporal.ChronoUnit.DAYS);
 
             // Increment the corresponding hour in the ArrayList
             if (hoursSinceCreation >= 0 && hoursSinceCreation <= totalHours) {

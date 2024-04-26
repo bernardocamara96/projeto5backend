@@ -28,7 +28,7 @@ public class StatisticsDto {
     @XmlElement
     private ArrayList<Integer> cumulativeTasksNumberByHour;
     @XmlElement
-    private LocalDateTime[] appHoursArray;
+    private String[] appHoursArray;
 
 
 
@@ -95,11 +95,11 @@ public class StatisticsDto {
         this.cumulativeTasksNumberByHour = cumulativeTasksNumberByHour;
     }
 
-    public LocalDateTime[] getAppHoursArray() {
+    public String[] getAppHoursArray() {
         return appHoursArray;
     }
 
-    public void setAppHoursArray(LocalDateTime[] appHoursArray) {
+    public void setAppHoursArray(String[] appHoursArray) {
         this.appHoursArray = appHoursArray;
     }
 

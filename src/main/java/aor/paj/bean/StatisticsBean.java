@@ -8,6 +8,7 @@ import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
 @Stateless
@@ -20,6 +21,8 @@ public class StatisticsBean {
     UserDao userDao;
 
     public boolean setStatistics(StatisticsDto statisticsDto){
+
+
         try {
             statisticsDto.setAverageTasksNumberByUser(taskBean.averageTasksByUserAndSetConfirmedUsers(statisticsDto));
             statisticsDto.setNotConfirmedUsers(userBean.countNotConfirmedUsers());
@@ -38,23 +41,25 @@ public class StatisticsBean {
             return false;
         }
     }
-    public LocalDateTime[] everyAppHour(){
+    public String[] everyAppHour(){
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
         LocalDateTime appCreationDate = userDao.getRegisterDate("admin");// Replace this with the actual app creation date
         LocalDateTime presentDate = LocalDateTime.now(); // Current date and time
 
-        appCreationDate = appCreationDate.plusHours(1).withMinute(0).withSecond(0).withNano(0);
+        appCreationDate = appCreationDate.toLocalDate().atStartOfDay();
 
         // Calculate the total number of hours between app creation date and present date
-        long totalHours = appCreationDate.until(presentDate, java.time.temporal.ChronoUnit.HOURS)+1;
+        long totalDays = appCreationDate.until(presentDate, java.time.temporal.ChronoUnit.DAYS) + 1;
 
         // Initialize an array to store hours
-        LocalDateTime[] hoursArray = new LocalDateTime[(int)totalHours+1];
+        String[] datesArray = new String[(int)totalDays];
 
         // Populate the array with each hour from creation date to present date
-        for (int i = 0; i <= totalHours; i++) {
-            hoursArray[i] = appCreationDate.plusHours(i);
+        for (int i = 0; i < totalDays; i++) {
+
+            datesArray[i] = appCreationDate.plusDays(i).format(formatter);
         }
-        return hoursArray;
+        return datesArray;
 
     }
 }

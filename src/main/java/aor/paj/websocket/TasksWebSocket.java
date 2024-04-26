@@ -88,7 +88,7 @@ public class TasksWebSocket {
             Session session = sessions.get(token);
             if (session != null) {
                 try {
-                    session.getBasicRemote().sendText("taskPermDelete: "+taskDto.toString());
+                    session.getBasicRemote().sendText("taskPermDelete: "+taskDto.getId());
                     System.out.println("sending.......... ");
                 } catch (IOException e) {
                     System.out.println("Something went wrong!");
