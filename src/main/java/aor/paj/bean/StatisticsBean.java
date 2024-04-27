@@ -43,20 +43,16 @@ public class StatisticsBean {
     }
     public String[] everyAppHour(){
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-        LocalDateTime appCreationDate = userDao.getRegisterDate("admin");// Replace this with the actual app creation date
-        LocalDateTime presentDate = LocalDateTime.now(); // Current date and time
+        LocalDateTime appCreationDate = userDao.getRegisterDate("admin");
+        LocalDateTime presentDate = LocalDateTime.now();
 
         appCreationDate = appCreationDate.toLocalDate().atStartOfDay();
 
-        // Calculate the total number of hours between app creation date and present date
         long totalDays = appCreationDate.until(presentDate, java.time.temporal.ChronoUnit.DAYS) + 1;
 
-        // Initialize an array to store hours
         String[] datesArray = new String[(int)totalDays];
 
-        // Populate the array with each hour from creation date to present date
         for (int i = 0; i < totalDays; i++) {
-
             datesArray[i] = appCreationDate.plusDays(i).format(formatter);
         }
         return datesArray;

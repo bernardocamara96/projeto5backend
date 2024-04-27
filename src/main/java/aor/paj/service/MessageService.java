@@ -46,41 +46,41 @@ public class MessageService {
         return Response.status(403).entity("User not logged").build();
     }
 
-    @POST
-    @Path("/")
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response createMessage(@HeaderParam("token") String token,MessageDto messageDto) throws IOException {
-        if (userBean.tokenValidator(token)) {
-            if(appConfigurationsBean.validateTimeout(token)) {
-                messageDto.setSendDate(LocalDateTime.now());
-                messageDto.setSeen(false);
-                try {
-                    if (messageBean.sendWebSocketMessage(token, messageDto)) {
-                        if (messageBean.addMessage(messageDto)) {
-                            logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+ userBean.findUsernameByToken(token)+" messaged "+messageDto.getRecipientUsername());
-                            return Response.status(200).entity(true).build();
-                        }
-                    }
-                    if(messageBean.addMessage(messageDto)){
-                        messageBean.sendUnseenMessages(messageDto.getRecipientUsername());
-                        logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+ userBean.findUsernameByToken(token)+" messaged "+messageDto.getRecipientUsername());
-                        return Response.status(200).entity(false).build();
-                    }else {
-                        logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+ userBean.findUsernameByToken(token)+" had an error when messaged "+messageDto.getRecipientUsername());
-                        return Response.status(400).entity("Error creating message").build();
-                    }
-                }catch(IOException e){
-                    logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+ userBean.findUsernameByToken(token)+" had an error when messaged "+messageDto.getRecipientUsername());
-                    return Response.status(400).entity("Error creating message").build();
-                }
-            }else {
-                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when messaged "+messageDto.getRecipientUsername());
-                return Response.status(401).entity("Session has expired").build();
-            }
-        }
-        logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when messaged "+messageDto.getRecipientUsername());
-        return Response.status(403).entity("User permissions violated").build();
-    }
+//    @POST
+//    @Path("/")
+//    @Consumes(MediaType.APPLICATION_JSON)
+//    public Response createMessage(@HeaderParam("token") String token,MessageDto messageDto) throws IOException {
+//        if (userBean.tokenValidator(token)) {
+//            if(appConfigurationsBean.validateTimeout(token)) {
+//                messageDto.setSendDate(LocalDateTime.now());
+//                messageDto.setSeen(false);
+//                try {
+//                    if (messageBean.sendWebSocketMessage(token, messageDto)) {
+//                        if (messageBean.addMessage(messageDto)) {
+//                            logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+ userBean.findUsernameByToken(token)+" messaged "+messageDto.getRecipientUsername());
+//                            return Response.status(200).entity(true).build();
+//                        }
+//                    }
+//                    if(messageBean.addMessage(messageDto)){
+//                        messageBean.sendUnseenMessages(messageDto.getRecipientUsername());
+//                        logger.info(InetAddress.getLocalHost().getHostAddress()+"  "+ userBean.findUsernameByToken(token)+" messaged "+messageDto.getRecipientUsername());
+//                        return Response.status(200).entity(false).build();
+//                    }else {
+//                        logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+ userBean.findUsernameByToken(token)+" had an error when messaged "+messageDto.getRecipientUsername());
+//                        return Response.status(400).entity("Error creating message").build();
+//                    }
+//                }catch(IOException e){
+//                    logger.warn(InetAddress.getLocalHost().getHostAddress()+"  "+ userBean.findUsernameByToken(token)+" had an error when messaged "+messageDto.getRecipientUsername());
+//                    return Response.status(400).entity("Error creating message").build();
+//                }
+//            }else {
+//                logger.warn(InetAddress.getLocalHost().getHostAddress()+" had session expired when messaged "+messageDto.getRecipientUsername());
+//                return Response.status(401).entity("Session has expired").build();
+//            }
+//        }
+//        logger.warn(InetAddress.getLocalHost().getHostAddress()+" had access denied when messaged "+messageDto.getRecipientUsername());
+//        return Response.status(403).entity("User permissions violated").build();
+//    }
 
     @PUT
     @Path("/saw/{usernameSender}")

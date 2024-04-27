@@ -502,6 +502,11 @@ public class UserBean implements Serializable {
         }
     }
 
+    public String findTokenByUsername(String username){
+        return userDao.findTokenByUsername(username);
+    }
+
+
     public ArrayList<Integer> calculateUsersByHour() {
         List<LocalDateTime> dateOfUsersRegister = userDao.getUsersRegisterDates();
 

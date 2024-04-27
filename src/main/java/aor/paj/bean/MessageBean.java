@@ -101,28 +101,29 @@ public class MessageBean implements Serializable {
         return null;
     }
 
-    public boolean sendWebSocketMessage(String token,MessageDto messageDto ) throws IOException {
-        UserEntity userEntity=userDao.findUserByToken(token);
-        String senderUsername=userEntity.getUsername();
-        String recipientToken=userDao.findTokenByUsername(messageDto.getRecipientUsername());
-        try{
-            messageDto.setSenderPhoto(userEntity.getPhotoURL());
-            if(messageWebSocket.send(recipientToken,senderUsername,messageDto)) return true;
-            else return false;
-        } catch (IOException e){
-            return false;
-        }
-    }
+//    public boolean sendWebSocketMessage(String token,MessageDto messageDto ) throws IOException {
+//        UserEntity userEntity=userDao.findUserByToken(token);
+//        String senderUsername=userEntity.getUsername();
+//        String recipientToken=userDao.findTokenByUsername(messageDto.getRecipientUsername());
+//        try{
+//            messageDto.setSenderPhoto(userEntity.getPhotoURL());
+//            if(messageWebSocket.send(recipientToken,senderUsername,messageDto)) return true;
+//            else return false;
+//        } catch (IOException e){
+//            return false;
+//        }
+//    }
+
 
    public int getMessagesNumberByToken(String token){
         UserEntity recipient=userDao.findUserByToken(token);
         return messageDao.getMessagesNumberByRecipient(recipient);
    }
 
-   public void sendUnseenMessages(String username){
-        UserEntity user=userDao.findUserByUsername(username);
-        messageWebSocket.sendUnseenMessagesNumber(user.getToken(),username);
-   }
+//   public void sendUnseenMessages(String username){
+//        UserEntity user=userDao.findUserByUsername(username);
+//        messageWebSocket.sendUnseenMessagesNumber(user.getToken(),username);
+//   }
 
    public ArrayList<NotificationDto> getNotifications(String token){
         int length=0;
