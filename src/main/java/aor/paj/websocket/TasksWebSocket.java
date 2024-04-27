@@ -1,12 +1,8 @@
 package aor.paj.websocket;
 
 import aor.paj.bean.*;
-import aor.paj.dto.StatisticsDto;
 import aor.paj.dto.TaskDto;
 import aor.paj.dto.TaskStatusDto;
-import aor.paj.service.status.Function;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ejb.Singleton;
 import jakarta.inject.Inject;
 import jakarta.websocket.*;
@@ -14,9 +10,7 @@ import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 
 
 @Singleton
@@ -28,8 +22,8 @@ public class TasksWebSocket {
     UserBean userBean;
     @Inject
     AppConfigurationsBean appConfigurationsBean;
-    @Inject
-    PermissionBean permissionBean;
+
+
 
 
 

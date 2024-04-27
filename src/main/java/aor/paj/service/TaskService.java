@@ -11,6 +11,7 @@ import aor.paj.entity.UserEntity;
 import aor.paj.service.status.Function;
 import aor.paj.service.status.userRoleManager;
 import aor.paj.service.validator.TaskValidator;
+import aor.paj.websocket.CategoriesWebSocket;
 import aor.paj.websocket.DashboardWebSocket;
 import aor.paj.websocket.TasksWebSocket;
 import jakarta.ejb.EJB;
@@ -43,6 +44,7 @@ public class TaskService {
     DashboardWebSocket dashboardWebSocket;
     @Inject
     TasksWebSocket tasksWebSocket;
+
     private static final Logger logger=LogManager.getLogger(TaskService.class);
 
     /**
@@ -51,7 +53,7 @@ public class TaskService {
     @POST
     @Path("/{type}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response createTask(@HeaderParam("token") String token,@PathParam("type")String categoryType, TaskDto a) throws UnknownHostException {
+    public Response createTask(@HeaderParam("token") String token,@PathParam("type")String categoryType, TaskDto a) throws IOException {
         if (userBean.tokenValidator(token)) {
             if(appConfigurationsBean.validateTimeout(token)) {
                 if (taskValidator.validateTask(a)) {
@@ -86,7 +88,7 @@ public class TaskService {
     @PATCH
     @Path("/edit/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response editTask( @PathParam("id")int id, @HeaderParam("token") String token, TaskDto taskDto) throws UnknownHostException {
+    public Response editTask( @PathParam("id")int id, @HeaderParam("token") String token, TaskDto taskDto) throws IOException {
         if (userBean.tokenValidator(token)) {
            if(appConfigurationsBean.validateTimeout(token)) {
                if (taskBean.taskIdValidator(id)) {

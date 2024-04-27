@@ -10,11 +10,13 @@ import aor.paj.entity.UserEntity;
 import aor.paj.service.status.taskStatusManager;
 import aor.paj.service.status.userRoleManager;
 import aor.paj.service.validator.TaskValidator;
+import aor.paj.websocket.CategoriesWebSocket;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -41,6 +43,8 @@ public class TaskBean{
     TaskValidator taskValidator;
     @EJB
     UserDao userDao;
+    @Inject
+    CategoriesWebSocket categoriesWebSocket;
 
     private TaskEntity convertTaskDtotoTaskEntity(TaskDto taskDto){
         TaskEntity taskEntity=new TaskEntity();
@@ -68,12 +72,13 @@ public class TaskBean{
         taskDto.setDeleted(taskEntity.isDeleted());
         return taskDto;
     }
-    public boolean addTask(String token,String type,TaskDto taskDto) {
+    public boolean addTask(String token,String type,TaskDto taskDto) throws IOException {
         if(token==null || type==null || taskDto==null) return false;
         UserEntity userEntity=userBean.getUserByToken(token);
         TaskEntity taskEntity=convertTaskDtotoTaskEntity(taskDto);
         CategoryEntity categoryEntity=categoryDao.findCategoryByType(type);
         if(categoryEntity!=null) {
+
             taskDto.setCategory_type(type);
             taskDto.setUsername_author(userEntity.getUsername());
             taskEntity.setUser(userEntity);
@@ -91,6 +96,7 @@ public class TaskBean{
             }
 
             taskDao.persist(taskEntity);
+            categoriesWebSocket.send();
             return true;
         }
         else return false;
@@ -120,7 +126,7 @@ public class TaskBean{
         else return false;
     }
 
-    public boolean editTask(int id, TaskDto taskDto){
+    public boolean editTask(int id, TaskDto taskDto) throws IOException {
         if(taskDto == null || id < 0) return false;
         if(taskValidator.validateTask(taskDto) && categoryDao.findCategoryByType(taskDto.getCategory_type())!=null){
             TaskEntity taskEntity=taskDao.findTaskById(id);
@@ -137,6 +143,7 @@ public class TaskBean{
                 taskEntity.setStartDate(taskDto.getStartDate());
             }
             taskDao.merge(taskEntity);
+            categoriesWebSocket.send();
             return true;
         }
         return false;

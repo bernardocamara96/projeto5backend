@@ -15,6 +15,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 
+import java.io.IOException;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -77,7 +79,7 @@ class TaskBeanTest {
     }
 
     @Test
-    void testAddTask_Success() {
+    void testAddTask_Success() throws IOException {
         TaskDto newTaskDto = new TaskDto();
         newTaskDto.setTitle("New Task");
         newTaskDto.setDescription("Description of the new task.");
@@ -96,7 +98,7 @@ class TaskBeanTest {
     }
 
     @Test
-    void testEditTask_Success() {
+    void testEditTask_Success() throws IOException {
         TaskDto taskDtoToUpdate = new TaskDto();
         taskDtoToUpdate.setTitle("Updated Task Title");
         taskDtoToUpdate.setDescription("Updated description.");
@@ -156,7 +158,7 @@ class TaskBeanTest {
     }
 
     @Test
-    void testEditTask_Failure_TaskNotFound() {
+    void testEditTask_Failure_TaskNotFound() throws IOException {
         TaskDto taskDtoToUpdate = new TaskDto();
         taskDtoToUpdate.setTitle("Updated Task Title");
         taskDtoToUpdate.setDescription("Updated description.");
