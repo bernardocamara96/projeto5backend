@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @NamedQuery(name="Message.getMessagesByRecipient",query="SELECT m FROM MessageEntity m WHERE  m.recipient=:recipient AND m.seen = true ORDER BY m.sendDate DESC")
 @NamedQuery(name="Message.deleteMessageById", query="DELETE FROM MessageEntity m WHERE m.id=:id")
 @NamedQuery(name="Message.getMessagesByUser",query="SELECT m FROM MessageEntity m WHERE m.sender=:user OR m.recipient=:user")
-
+@NamedQuery(name="Message.getSendersSeenFalseByRecipient",query="SELECT DISTINCT m.sender FROM MessageEntity m WHERE m.seen = false AND m.recipient=:recipient")
 
 public class MessageEntity implements Serializable {
 

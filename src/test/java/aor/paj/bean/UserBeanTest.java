@@ -5,6 +5,7 @@ import aor.paj.dao.UserDao;
 import aor.paj.dto.TaskUpdate;
 import aor.paj.dto.User;
 import aor.paj.dto.UserWithNoPassword;
+import aor.paj.emailsender.EmailSender;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.validator.UserValidator;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,9 @@ class UserBeanTest {
     private User testUserUP;
     @Mock
     private UserValidator userValidator;
+    @Mock
+    EmailSender emailSender;
+
 
     @BeforeEach
     void setUp() {

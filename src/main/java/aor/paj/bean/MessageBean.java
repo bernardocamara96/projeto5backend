@@ -80,6 +80,10 @@ public class MessageBean implements Serializable {
 
     public boolean setSeenToTrueByRecipient(String token) throws IOException {
         UserEntity recipient=userDao.findUserByToken(token);
+        ArrayList<UserEntity> senders=messageDao.getSendersSeenFalseByRecipient(recipient);
+        for(UserEntity sender:senders){
+            messageWebSocket.sendSeenMessages(sender.getToken(),recipient.getUsername());
+        }
         if(recipient!=null){
             if(messageDao.setMessagesSeenToTrueByRecipient(recipient)){
                 return true;
@@ -127,6 +131,7 @@ public class MessageBean implements Serializable {
 
    public ArrayList<NotificationDto> getNotifications(String token){
         int length=0;
+
        UserEntity recipient=userDao.findUserByToken(token);
         ArrayList<MessageEntity> messageEntities=messageDao.getMessagesSeenFalseByRecipient(recipient);
         ArrayList<NotificationDto> notificationDtos=new ArrayList<>();

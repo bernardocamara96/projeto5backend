@@ -1,7 +1,10 @@
 package aor.paj.bean;
 
 import aor.paj.dao.CategoryDao;
+import aor.paj.dao.TaskDao;
 import aor.paj.dto.CategoryDto;
+import aor.paj.dto.CategoryStatsDto;
+import aor.paj.dto.TaskDto;
 import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.UserEntity;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +28,10 @@ class CategoryBeanTest {
 
     @Mock
     private CategoryDao categoryDao;
-
+    @Mock
+    private TaskDao taskDao;
+    @Mock
+    private TaskBean taskBean;
     @Mock
     private UserBean userBean;
 
@@ -116,5 +122,30 @@ class CategoryBeanTest {
         assertFalse(result.isEmpty(), "The result list should not be empty");
         assertEquals(1, result.size(), "The result list should contain one category");
         assertEquals(testCategory, result.get(0), "The category in the result list should match the test category");
+    }
+
+    @Test
+    void testOrdenedCategoriesList() {
+        CategoryEntity category1 = new CategoryEntity("Category1", userBean.getUserByUsername("admin"));
+        CategoryEntity category2 = new CategoryEntity("Category2", userBean.getUserByUsername("admin"));
+        CategoryEntity category3 = new CategoryEntity("Category3", userBean.getUserByUsername("admin"));
+
+        ArrayList<CategoryEntity> categories = new ArrayList<>();
+        categories.add(category1);
+        categories.add(category2);
+        categories.add(category3);
+
+
+        when(categoryBean.getAllCategories()).thenReturn(categories);
+        when(taskBean.tasksNumberByCategory(category1)).thenReturn(10);
+        when(taskBean.tasksNumberByCategory(category2)).thenReturn(5);
+        when(taskBean.tasksNumberByCategory(category3)).thenReturn(8);
+
+        ArrayList<CategoryStatsDto> orderedCategories = categoryBean.ordenedCategoriesList();
+
+        assertEquals(10, orderedCategories.get(0).getTasksNumber()); // First category should have tasks number 10
+        assertEquals(8, orderedCategories.get(1).getTasksNumber()); // Second category should have tasks number 8
+        assertEquals(5, orderedCategories.get(2).getTasksNumber()); // Third category should have tasks number 5
+
     }
 }

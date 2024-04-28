@@ -8,6 +8,7 @@ import aor.paj.entity.CategoryEntity;
 import aor.paj.entity.TaskEntity;
 import aor.paj.entity.UserEntity;
 import aor.paj.service.validator.TaskValidator;
+import aor.paj.websocket.CategoriesWebSocket;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -40,6 +41,8 @@ class TaskBeanTest {
 
     @Mock
     private UserBean userBean;
+    @Mock
+    private CategoriesWebSocket categoriesWebSocket;
 
     private UserEntity testUser;
     private CategoryEntity testCategory;
@@ -71,7 +74,7 @@ class TaskBeanTest {
         testTask.setCategory(testCategory);
         testTask.setUser(testUser);
 
-
+        when(userBean.getUserByToken("uniqueToken123456")).thenReturn(testUser);
         when(userDao.findUserByUsername(anyString())).thenReturn(testUser);
         when(categoryDao.findCategoryByType(anyString())).thenReturn(testCategory);
         when(taskDao.findTaskById(anyInt())).thenReturn(testTask);
@@ -85,7 +88,7 @@ class TaskBeanTest {
         newTaskDto.setDescription("Description of the new task.");
         newTaskDto.setCategory_type(testCategory.getType());
         newTaskDto.setUsername_author(testUser.getUsername());
-        boolean result = taskBean.addTask("validToken", "Work", newTaskDto);
+        boolean result = taskBean.addTask("uniqueToken123456", "Work", newTaskDto);
         assertTrue(result, "Task should be added successfully");
         verify(taskDao, times(1)).persist(any(TaskEntity.class));
     }

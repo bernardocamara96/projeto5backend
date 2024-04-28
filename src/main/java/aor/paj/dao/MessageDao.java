@@ -78,6 +78,15 @@ public class MessageDao extends AbstractDao<MessageEntity>{
         }
     }
 
+    public ArrayList<UserEntity> getSendersSeenFalseByRecipient(UserEntity recipient){
+        try{
+            return (ArrayList<UserEntity>) em.createNamedQuery("Message.getSendersSeenFalseByRecipient").setParameter("recipient",recipient).getResultList();
+
+        }catch (NoResultException e) {
+            return null;
+        }
+    }
+
     public int getMessagesSeenFalseNumber(UserEntity sender,UserEntity recipient){
         try{
             return ((Number) em.createNamedQuery("Message.getMessagesSeenFalseNumber").setParameter("sender",sender).setParameter("recipient",recipient).getSingleResult()).intValue();
