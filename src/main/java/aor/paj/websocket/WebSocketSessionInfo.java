@@ -6,7 +6,10 @@ public class WebSocketSessionInfo {
     private String username;
     private Session session;
 
-
+    /**
+     Object used in MessageWebSocket
+     * Represents information about a WebSocket session, including the associated username and session object.
+     */
     public WebSocketSessionInfo( String username, Session session) {
         this.username = username;
         this.session=session;

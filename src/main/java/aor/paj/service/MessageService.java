@@ -28,6 +28,10 @@ public class MessageService {
     MessageBean messageBean;
     private static final Logger logger=LogManager.getLogger(MessageService.class);
 
+
+    /**
+     * Endpoint to retrieve messages between the authenticated user and another user.
+     */
     @GET
     @Path("/{username}")
     @Produces(MediaType.APPLICATION_JSON)

@@ -13,7 +13,7 @@ public class NotificationDto {
     private String senderFirstName;
     @XmlElement
     private String senderUsername;
-   
+
     @XmlElement
     private String text;
     @XmlElement

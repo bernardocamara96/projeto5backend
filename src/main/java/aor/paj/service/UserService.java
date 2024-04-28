@@ -274,6 +274,11 @@ public class UserService {
     }
 
 
+    /**
+     * Endpoint to confirm user account status.
+     * If the user is authenticated and authorized, updates the user's password and confirmation status.
+     **/
+
     @PATCH
     @Path("/confirmed/{confirmed}")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -297,7 +302,11 @@ public class UserService {
             return Response.status(401).entity("Access denied").build();}
     }
 
-    @POST
+    /**
+     * Endpoint to request a new password via email.
+     * If the email is valid and exists in the database, sends a password reset email.
+     **/
+     @POST
     @Path("/newpassemail")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response newPassEmail(@HeaderParam("email") String email) throws UnknownHostException {
@@ -320,6 +329,9 @@ public class UserService {
         }
     }
 
+    /**
+     * Endpoint to validate an auxiliary authentication token.
+     **/
     @GET
     @Path("/auxiliartokenvalidator")
     @Produces(MediaType.APPLICATION_JSON)
@@ -330,7 +342,11 @@ public class UserService {
     }
 
 
-    @POST
+    /**
+     * Endpoint to recover a user's password.
+     * If the user is authenticated and authorized, updates the user's password.
+    **/
+     @POST
     @Path("/recoverpassword")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response recoverPassword(@HeaderParam("newPass")String newPass, @HeaderParam("token") String token) throws UnknownHostException {
@@ -356,7 +372,11 @@ public class UserService {
             return Response.status(401).entity("Access denied").build();}
     }
 
-    @POST
+    /**
+     * Endpoint to resend an email for account confirmation.
+     * If the token is valid, generates a new token, sends another email to the user for account confirmation,
+    **/
+     @POST
     @Path("/resendemail")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response resendEmail(@HeaderParam("token") String token) throws UnknownHostException {
@@ -516,7 +536,7 @@ public class UserService {
      * This endpoint makes logging out a user. Since this example does not
      * manage user sessions or authentication tokens explicitly, the endpoint simply returns
      * a response indicating that the user has been logged out successfully.
-     *  */
+     */
     @POST
     @Path("/logout")
     public Response logout(@HeaderParam("token")String token) throws UnknownHostException {
@@ -529,6 +549,10 @@ public class UserService {
         return Response.status(200).entity("User logged out successfully").build();
     }
 
+    /**
+     * Endpoint to retrieve a specific configuration value by name.
+     * Validates the user's token and session timeout before retrieving the configuration information.
+     */
     @GET
     @Path("/configuration/{name}")
     public Response getConfigurationValue(@HeaderParam("token")String token, @PathParam("name")String name) throws UnknownHostException {
@@ -546,9 +570,13 @@ public class UserService {
       }
     }
 
-    @PATCH
+    /**
+     * Endpoint to update a specific configuration value by name.
+     * Validates the user's token and session timeout before updating the configuration value.
+    */
+ @PATCH
     @Path("/configuration/{name}/{value}")
-    public Response getConfigurationValue(@HeaderParam("token")String token, @PathParam("name")String name, @PathParam("value")String value) throws UnknownHostException {
+    public Response setConfigurationValue(@HeaderParam("token")String token, @PathParam("name")String name, @PathParam("value")String value) throws UnknownHostException {
       long valueLong=0;
       try {
           valueLong = Long.parseLong(value);

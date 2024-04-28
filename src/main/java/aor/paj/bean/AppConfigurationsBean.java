@@ -20,6 +20,7 @@ public class AppConfigurationsBean {
     @Inject
     UserDao userDao;
 
+/** Creates default application configurations if they do not exist already. **/
     public void createDefaultAppConfigurations(){
         AppConfigurationsEntity timeoutConfig= appConfigurationsDao.findAppConfigurationByName("session_timeout");
         if (timeoutConfig == null){

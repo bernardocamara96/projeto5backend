@@ -31,6 +31,9 @@ public class StatisticsService {
 
     private static final Logger logger=LogManager.getLogger(StatisticsService.class);
 
+    /**
+     * Endpoint to retrieve application statistics.
+     */
     @GET
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)

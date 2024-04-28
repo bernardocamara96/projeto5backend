@@ -29,6 +29,8 @@ public class MessageBean implements Serializable {
     MessageDao messageDao;
     @Inject
     MessageWebSocket messageWebSocket;
+    @EJB
+    UserBean userBean;
 
 
     public MessageDto convertMessageEntityToMessageDto(MessageEntity messageEntity){
@@ -162,6 +164,15 @@ public class MessageBean implements Serializable {
         for (MessageEntity message:messageEntities) {
             messageDao.deleteMessageById(message.getId());
         }
+   }
+
+   public void auxiliarMethodMessageDto(MessageDto messageDto){
+       UserEntity recipient=userBean.getUserByUsername(messageDto.getRecipientUsername());
+       UserEntity sender=userBean.getUserByUsername(messageDto.getSenderUsername());
+       messageDto.setSenderPhoto(sender.getPhotoURL());
+       messageDto.setSendDate(LocalDateTime.now());
+       messageDto.setSenderFirstName(sender.getFirstName());
+       messageDto.setRecipientFirstName(recipient.getFirstName());
    }
 
 

@@ -32,8 +32,9 @@ public class DashboardWebSocket {
     @Inject
     PermissionBean permissionBean;
 
-
-
+    /**
+     * Sends statistics to all connected WebSocket sessions.
+    */
     public void send() throws IOException {
         ArrayList<String> tokens=userBean.getAllTokens();
 

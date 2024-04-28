@@ -24,9 +24,9 @@ public class TasksWebSocket {
     AppConfigurationsBean appConfigurationsBean;
 
 
-
-
-
+    /**
+     * Sends the updated task to all connected WebSocket sessions.
+     */
     public void sendEditTask(TaskDto taskDto) throws IOException {
         ArrayList<String> tokens=userBean.getAllTokens();
 
@@ -43,22 +43,29 @@ public class TasksWebSocket {
         }
     }
 
-    public void sendDeleteTempTask(TaskDto taskDto) throws IOException {
-        ArrayList<String> tokens=userBean.getAllTokens();
+    /**
+     * Sends the deleted task to all WebSocket sessions
+    */
+     public void sendDeleteTempTask(TaskDto taskDto) throws IOException {
+            ArrayList<String> tokens=userBean.getAllTokens();
 
-        for (String token:tokens) {
-            Session session = sessions.get(token);
-            if (session != null) {
-                try {
-                    session.getBasicRemote().sendText("taskTempDelete: "+taskDto.toString());
-                    System.out.println("sending.......... ");
-                } catch (IOException e) {
-                    System.out.println("Something went wrong!");
+            for (String token:tokens) {
+                Session session = sessions.get(token);
+                if (session != null) {
+                    try {
+                        session.getBasicRemote().sendText("taskTempDelete: "+taskDto.toString());
+                        System.out.println("sending.......... ");
+                    } catch (IOException e) {
+                        System.out.println("Something went wrong!");
+                    }
                 }
             }
         }
-    }
 
+
+    /**
+     * Sends the recycled task to all WebSocket sessions
+     */
     public void sendRecycleTask(TaskDto taskDto) throws IOException {
         ArrayList<String> tokens=userBean.getAllTokens();
 
@@ -75,6 +82,9 @@ public class TasksWebSocket {
         }
     }
 
+    /**
+     * Sends the task that was permanentley deleted to all WebSocket sessions
+     */
     public void sendPermDeleteTask(TaskDto taskDto) throws IOException {
         ArrayList<String> tokens=userBean.getAllTokens();
 
@@ -92,6 +102,9 @@ public class TasksWebSocket {
     }
 
 
+    /**
+     * Sends all the tasks that were temporarily deleted to all WebSocket sessions
+     */
     public void sendAllTempDeleteTasks(ArrayList<TaskDto> taskDtos) throws IOException {
         ArrayList<String> tokens=userBean.getAllTokens();
 
@@ -112,7 +125,9 @@ public class TasksWebSocket {
         }
     }
 
-
+    /**
+     * Sends the task which status was updated to all WebSocket sessions
+     */
     public void sendStatusTask(TaskStatusDto taskStatusDto) throws IOException {
         ArrayList<String> tokens=userBean.getAllTokens();
 

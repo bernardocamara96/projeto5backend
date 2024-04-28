@@ -21,7 +21,11 @@ public class NotificationsWebSocket{
     MessageBean messageBean;
     @Inject
     AppConfigurationsBean appConfigurationsBean;
-    public boolean sendUnseenMessagesNumber(@PathParam("token")String token){
+
+    /**
+     * Sends the number of unseen messages to the WebSocket session associated with the given token.
+    */
+ public boolean sendUnseenMessagesNumber(@PathParam("token")String token){
 
         Session session = sessions.get(token);
         if (session!= null) {

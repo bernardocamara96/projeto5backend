@@ -24,8 +24,9 @@ public class CategoriesWebSocket {
     @Inject
     CategoryBean categoryBean;
 
-
-
+    /**
+     * Sends category statistics to all active sessions.
+     */
     public void send() throws IOException {
         ArrayList<String> tokens=userBean.getAllTokens();
 
@@ -43,7 +44,6 @@ public class CategoriesWebSocket {
             }
         }
     }
-
 
     @OnOpen
     public void toDoOnOpen(Session session, @PathParam("token") String token){

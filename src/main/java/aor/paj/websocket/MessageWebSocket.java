@@ -42,8 +42,10 @@ public class MessageWebSocket {
     private static final Logger logger=LogManager.getLogger(MessageWebSocket.class);
 
 
-
-    public boolean sendSeenMessages(@PathParam("token")String token, @PathParam("username") String username){
+    /**
+     * Sends the information that all the messages were seen to the WebSocket session associated with the given token and username.
+    */
+ public boolean sendSeenMessages(@PathParam("token")String token, @PathParam("username") String username){
 
         WebSocketSessionInfo webSocketSessionInfo = sessions.get(token);
         if (webSocketSessionInfo != null) {
@@ -82,8 +84,18 @@ public class MessageWebSocket {
                 reason.getCloseCode() + ": "+reason.getReasonPhrase());
         sessions.values().removeIf(sessionInfo -> sessionInfo.getSession().equals(session));
     }
-    @OnMessage
-    public void toDoOnMessage(String message) throws UnknownHostException {
+
+
+/**
+ * Handles the incoming message from the WebSocket.
+ * Parses the incoming message into a MessageDto object.
+ * Retrieves the recipient user and their token.
+ * If the recipient is connected via WebSocket, marks the message as seen,
+ * adds the message to the database, and sends it to the recipient's WebSocket.
+ * If the recipient is not connected, adds the message to the database and sends unseen message count.
+*/
+ @OnMessage
+    public void toDoOnMessage(String message) throws IOException {
 
         GsonBuilder gsonBuilder = new GsonBuilder();
 
@@ -93,53 +105,59 @@ public class MessageWebSocket {
         // Create a Gson instance
         Gson gson = gsonBuilder.create();
         MessageDto messageDto=gson.fromJson(message, MessageDto.class);
-        UserEntity recipient=userBean.getUserByUsername(messageDto.getRecipientUsername());
 
-        String recipientToken=null;
-        if(recipient!=null) {
-            recipientToken = recipient.getToken();
+        String senderToken= userBean.findTokenByUsername(messageDto.getSenderUsername());
+        String recipientToken=userBean.findTokenByUsername(messageDto.getRecipientUsername());
 
-            UserEntity sender = userBean.getUserByUsername(messageDto.getSenderUsername());
+        WebSocketSessionInfo webSocketSessionInfoSender=sessions.get(senderToken);
 
-            messageDto.setSenderPhoto(sender.getPhotoURL());
-            messageDto.setSendDate(LocalDateTime.now());
-            messageDto.setSenderFirstName(sender.getFirstName());
-            messageDto.setRecipientFirstName(recipient.getFirstName());
+        if(appConfigurationsBean.validateTimeout(senderToken)) {
+            if (recipientToken != null) {
 
-            if (!recipientToken.isEmpty()) {
+               messageBean.auxiliarMethodMessageDto(messageDto);
 
-                WebSocketSessionInfo webSocketSessionInfo = sessions.get(recipientToken);
-                if (webSocketSessionInfo != null) {
-                    if (webSocketSessionInfo.getUsername().equals(messageDto.getSenderUsername())) {
-                        try {
-                            messageDto.setSeen(true);
-                            addMessageMethod(messageDto,sender,recipient);
-                            sendSeenMessages(sender.getToken(), recipient.getUsername());
-                            webSocketSessionInfo.getSession().getBasicRemote().sendText("getMessages: " + messageDto.toString());
-                            System.out.println("sending.......... ");
-                        } catch (IOException e) {
-                            System.out.println("Something went wrong!");
+                if (!recipientToken.isEmpty()) {
+                    WebSocketSessionInfo webSocketSessionInfo = sessions.get(recipientToken);
+                    if (webSocketSessionInfo != null) {
+                        if (webSocketSessionInfo.getUsername().equals(messageDto.getSenderUsername())) {
+                            if(appConfigurationsBean.validateTimeout(recipientToken)) {
+                                try {
+                                    messageDto.setSeen(true);
+                                    addMessageMethod(messageDto, messageDto.getSenderFirstName(), messageDto.getRecipientFirstName());
+                                    sendSeenMessages(senderToken,messageDto.getRecipientUsername());
+                                    webSocketSessionInfo.getSession().getBasicRemote().sendText("getMessages: " + messageDto.toString());
+                                    System.out.println("sending.......... ");
+                                } catch (IOException e) {
+                                    System.out.println("Something went wrong!");
+                                }
+                            }else {
+                                messageDto.setSeen(false);
+                                addMessageMethod(messageDto,messageDto.getSenderFirstName(),messageDto.getRecipientFirstName());
+                                webSocketSessionInfo.getSession().getBasicRemote().sendText("Token has expired");
+                            }
+                        } else {
+                            messageDto.setSeen(false);
+                            addMessageMethod(messageDto, messageDto.getSenderFirstName(), messageDto.getRecipientFirstName());
+                            notificationsWebSocket.sendUnseenMessagesNumber(recipientToken);
                         }
-                    }else {
+                    } else {
                         messageDto.setSeen(false);
-                        addMessageMethod(messageDto,sender,recipient);
+                        addMessageMethod(messageDto, messageDto.getSenderFirstName(), messageDto.getRecipientFirstName());
                         notificationsWebSocket.sendUnseenMessagesNumber(recipientToken);
                     }
-                }else {
+                } else {
                     messageDto.setSeen(false);
-                    addMessageMethod(messageDto,sender,recipient);
-                    notificationsWebSocket.sendUnseenMessagesNumber(recipientToken);
+                    addMessageMethod(messageDto, messageDto.getSenderFirstName(), messageDto.getRecipientFirstName());
                 }
-            } else {
-                messageDto.setSeen(false);
-                addMessageMethod(messageDto,sender,recipient);
             }
+        }else {
+            webSocketSessionInfoSender.getSession().getBasicRemote().sendText("Token has expired");
         }
     }
 
-    private void addMessageMethod(MessageDto messageDto, UserEntity sender, UserEntity recipient) throws UnknownHostException {
+    private void addMessageMethod(MessageDto messageDto, String senderName, String recipientName) throws UnknownHostException {
 
         messageBean.addMessage(messageDto);
-        logger.info(InetAddress.getLocalHost().getHostAddress() + "  " + sender + " messaged " + recipient);
+        logger.info(InetAddress.getLocalHost().getHostAddress() + "  " + senderName + " messaged " + recipientName);
     }
 }

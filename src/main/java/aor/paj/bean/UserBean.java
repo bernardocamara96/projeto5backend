@@ -551,5 +551,4 @@ public class UserBean implements Serializable {
     public String findUsernameByAuxiliarToken(String auxiliarToken){
         return userDao.findUsernameByAuxiliarToken(auxiliarToken);
     }
-
 }
